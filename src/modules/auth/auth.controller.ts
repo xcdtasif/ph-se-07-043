@@ -2,7 +2,7 @@ import type { Request, Response } from "express"
 import httpStatus from "http-status"
 
 import { sendResponse } from "../../utils/send-response.js"
-import type { RegisterUserPayload, VerifyEmailPayload } from "./auth.schema.js"
+import type { LoginUserPayload, RegisterUserPayload, VerifyEmailPayload } from "./auth.schema.js"
 import { authService } from "./auth.service.js"
 
 const registerUser = async (req: Request<{}, {}, RegisterUserPayload>, res: Response) => {
@@ -27,4 +27,15 @@ const verifyEmail = async (req: Request<{}, {}, VerifyEmailPayload>, res: Respon
   })
 }
 
-export const authController = { registerUser, verifyEmail }
+const loginUser = async (req: Request<{}, {}, LoginUserPayload>, res: Response) => {
+  const result = await authService.loginUser(req.body)
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Logged in successfully",
+    data: result,
+  })
+}
+
+export const authController = { registerUser, verifyEmail, loginUser }

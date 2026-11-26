@@ -7,7 +7,7 @@ import { prisma } from "../../lib/prisma.js"
 import { redis } from "../../lib/redis.js"
 import { AppError } from "../../utils/app-error.js"
 import { verifyEmailTemplate } from "./auth.emails.js"
-import type { RegisterUserPayload, VerifyEmailPayload } from "./auth.schema.js"
+import type { LoginUserPayload, RegisterUserPayload, VerifyEmailPayload } from "./auth.schema.js"
 import { authUserSelect, publicUser, toAuthUser } from "./auth.user.js"
 import { authUtils } from "./auth.utils.js"
 
@@ -109,4 +109,29 @@ const verifyEmail = async ({ email, otp }: VerifyEmailPayload) => {
   return issueSession(user)
 }
 
-export const authService = { registerUser, verifyEmail }
+const loginUser = async ({ email, password }: LoginUserPayload) => {
+  const found = await prisma.user.findUnique({
+    where: { email },
+    select: { ...authUserSelect, password: true },
+  })
+
+  const isPasswordValid = await authUtils.comparePassword(
+    password,
+    found?.password ?? authUtils.DUMMY_HASH,
+  )
+
+  // Google-only users have no password yet and get the same answer as a wrong password
+  if (!found?.password || !isPasswordValid) {
+    throw new AppError(httpStatus.UNAUTHORIZED, "Invalid email or password")
+  }
+
+  const { password: _password, ...user } = found
+
+  if (user.isBanned) {
+    throw new AppError(httpStatus.FORBIDDEN, "Your account has been banned")
+  }
+
+  return issueSession(user)
+}
+
+export const authService = { registerUser, verifyEmail, loginUser }

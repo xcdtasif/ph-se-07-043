@@ -24,3 +24,11 @@ export const verifyEmailSchema = z.strictObject({
 })
 
 export type VerifyEmailPayload = z.output<typeof verifyEmailSchema>
+
+// No length rules here: a wrong password should fail as "invalid credentials", not as validation
+export const loginUserSchema = z.strictObject({
+  email: emailSchema,
+  password: z.string().min(1).max(1000),
+})
+
+export type LoginUserPayload = z.output<typeof loginUserSchema>
