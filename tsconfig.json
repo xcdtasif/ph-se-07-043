@@ -6,7 +6,6 @@
     "module": "nodenext",
     "target": "es2024",
     "lib": ["es2024"],
-    "types": ["node"],
     "sourceMap": true,
 
     "strict": true,
