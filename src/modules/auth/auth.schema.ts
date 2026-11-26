@@ -18,17 +18,53 @@ export const registerUserSchema = z.strictObject({
 
 export type RegisterUserPayload = z.output<typeof registerUserSchema>
 
+const otpSchema = z.string().regex(/^\d{6}$/, { error: "OTP must be 6 digits" })
+
 export const verifyEmailSchema = z.strictObject({
   email: emailSchema,
-  otp: z.string().regex(/^\d{6}$/, { error: "OTP must be 6 digits" }),
+  otp: otpSchema,
 })
 
 export type VerifyEmailPayload = z.output<typeof verifyEmailSchema>
 
-// No length rules here: a wrong password should fail as "invalid credentials", not as validation
+// No length rules on an existing password: a wrong one should fail as "invalid", not as validation
+const currentPasswordSchema = z.string().min(1).max(1000)
+
 export const loginUserSchema = z.strictObject({
   email: emailSchema,
-  password: z.string().min(1).max(1000),
+  password: currentPasswordSchema,
 })
 
 export type LoginUserPayload = z.output<typeof loginUserSchema>
+
+export const refreshTokenSchema = z.strictObject({
+  refreshToken: z.string().min(1),
+})
+
+export type RefreshTokenPayload = z.output<typeof refreshTokenSchema>
+
+export const forgotPasswordSchema = z.strictObject({
+  email: emailSchema,
+})
+
+export type ForgotPasswordPayload = z.output<typeof forgotPasswordSchema>
+
+export const resetPasswordSchema = z.strictObject({
+  email: emailSchema,
+  otp: otpSchema,
+  newPassword: passwordSchema,
+})
+
+export type ResetPasswordPayload = z.output<typeof resetPasswordSchema>
+
+export const changePasswordSchema = z
+  .strictObject({
+    currentPassword: currentPasswordSchema,
+    newPassword: passwordSchema,
+  })
+  .refine((value) => value.newPassword !== value.currentPassword, {
+    path: ["newPassword"],
+    error: "New password must be different from the current one",
+  })
+
+export type ChangePasswordPayload = z.output<typeof changePasswordSchema>

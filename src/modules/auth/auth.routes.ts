@@ -1,16 +1,25 @@
 import { Router } from "express"
 
+import { authenticate } from "../../middlewares/authenticate.js"
 import { byIpAndEmail, rateLimit } from "../../middlewares/rate-limit.js"
 import { validate } from "../../middlewares/validate.js"
 import { verifyTurnstile } from "../../middlewares/verify-turnstile.js"
 import { authController } from "./auth.controller.js"
-import { loginUserSchema, registerUserSchema, verifyEmailSchema } from "./auth.schema.js"
+import {
+  changePasswordSchema,
+  forgotPasswordSchema,
+  loginUserSchema,
+  refreshTokenSchema,
+  registerUserSchema,
+  resetPasswordSchema,
+  verifyEmailSchema,
+} from "./auth.schema.js"
 
 const router = Router()
 
 /*
 Rate limits run first (cheapest check), then the bot check, then validation.
-Each register sends an email, so it gets the tightest limit
+Register and forgot password send an email, so they get the tightest limit
 */
 
 // Register User
@@ -37,6 +46,38 @@ router.post(
   verifyTurnstile,
   validate(loginUserSchema, "body"),
   authController.loginUser,
+)
+
+// Refresh Tokens
+router.post("/refresh-token", validate(refreshTokenSchema, "body"), authController.refreshTokens)
+
+// Log Out User
+router.post("/logout", authenticate, authController.logoutUser)
+
+// Forgot Password
+router.post(
+  "/forgot-password",
+  rateLimit({ prefix: "forgot-password", limit: 5, window: "1 h", key: byIpAndEmail }),
+  verifyTurnstile,
+  validate(forgotPasswordSchema, "body"),
+  authController.forgotPassword,
+)
+
+// Reset Password
+router.post(
+  "/reset-password",
+  rateLimit({ prefix: "reset-password", limit: 10, window: "10 m", key: byIpAndEmail }),
+  validate(resetPasswordSchema, "body"),
+  authController.resetPassword,
+)
+
+// Change Password
+router.patch(
+  "/change-password",
+  rateLimit({ prefix: "change-password", limit: 10, window: "15 m" }),
+  authenticate,
+  validate(changePasswordSchema, "body"),
+  authController.changePassword,
 )
 
 export const authRouter = router

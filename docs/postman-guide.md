@@ -18,11 +18,11 @@ Dev assumes `PORT=5000` in `.env.local`.
 
 ## Variables
 
-| Variable       | Scope       | Used by                 | Value                                         |
-| -------------- | ----------- | ----------------------- | --------------------------------------------- |
-| `baseUrl`      | Environment | Every request           | The API root of the selected environment      |
-| `accessToken`  | Collection  | Every protected request | Saved by **Log In User** and **Verify Email** |
-| `refreshToken` | Collection  | Refresh Tokens (later)  | Saved by **Log In User** and **Verify Email** |
+| Variable       | Scope       | Used by                 | Value                                      |
+| -------------- | ----------- | ----------------------- | ------------------------------------------ |
+| `baseUrl`      | Environment | Every request           | The API root of the selected environment   |
+| `accessToken`  | Collection  | Every protected request | Saved by every request that returns tokens |
+| `refreshToken` | Collection  | **Refresh Tokens**      | Saved by every request that returns tokens |
 
 ## Authentication
 
@@ -34,11 +34,15 @@ request, except the `Public` folders, which send none.
 2. Send the requests for that role. The token is attached automatically.
 3. To switch roles, log in again as the other user. A new login replaces the tokens.
 
-`401` means the token is missing, expired, or was issued before a logout. Log in again.
+Log In User, Verify Email, Refresh Tokens and Change Password all save the tokens they return.
+
+`401 Token expired` means the access token ran out: send **Auth / Public / Refresh Tokens** to get
+a new pair. Any other `401` means the token is missing, or was issued before a logout or password
+change. Log in again.
 
 ### Bot Check
 
-**Register User** and **Log In User** send `"turnstileToken": "XXXX.DUMMY.TOKEN.XXXX"`. That's
+**Register User**, **Log In User** and **Forgot Password** send `"turnstileToken": "XXXX.DUMMY.TOKEN.XXXX"`. That's
 Cloudflare's dummy token, which the API accepts while `TURNSTILE_SECRET_KEY` is Cloudflare's test
 secret (`1x0000000000000000000000000000000AA`), as it is on the deployed API. With a real secret,
 only a token from the frontend's widget passes.
@@ -61,6 +65,15 @@ Edit the email and password in the **Log In User** body to switch accounts.
 1. Send **Register User** with an email you can read. It mails a 6-digit code.
 2. Send **Verify Email** with that email and code within 10 minutes. It creates the account and
    saves the tokens like **Log In User**.
+
+## Resetting A Password
+
+1. Send **Forgot Password** with an email you can read. It mails a 6-digit code.
+2. Send **Reset Password** with that email, code and a new password within 10 minutes. It signs out
+   every session, so log in again.
+
+The seeded accounts use `@example.com` addresses, which receive no mail. To test on them, use
+**Change Password** while logged in instead, and change it back to `1a2s3d4f` afterwards.
 
 ## Example IDs And Bodies
 
