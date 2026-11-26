@@ -8,6 +8,7 @@ import { env } from "./config/env.js"
 import { errorHandler } from "./middlewares/error-handler.js"
 import { notFound } from "./middlewares/not-found.js"
 import { rateLimit } from "./middlewares/rate-limit.js"
+import { authRouter } from "./modules/auth/auth.routes.js"
 import { sendResponse } from "./utils/send-response.js"
 
 const app: Application = express()
@@ -23,6 +24,9 @@ app.use(express.json())
 app.get("/api/v1/health", (_req, res) => {
   sendResponse(res, { success: true, statusCode: httpStatus.OK, message: "Server is running" })
 })
+
+// Auth
+app.use("/api/v1/auth", authRouter)
 
 app.use(notFound)
 app.use(errorHandler)
