@@ -66,4 +66,6 @@ export const env = {
   SMTP_PASS: getEnv("SMTP_PASS"),
 
   TURNSTILE_SECRET_KEY: getEnv("TURNSTILE_SECRET_KEY"),
+
+  GOOGLE_CLIENT_ID: getEnv("GOOGLE_CLIENT_ID"),
 } as const

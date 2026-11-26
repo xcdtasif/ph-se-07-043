@@ -8,6 +8,7 @@ import { authController } from "./auth.controller.js"
 import {
   changePasswordSchema,
   forgotPasswordSchema,
+  googleLoginSchema,
   loginUserSchema,
   refreshTokenSchema,
   registerUserSchema,
@@ -46,6 +47,14 @@ router.post(
   verifyTurnstile,
   validate(loginUserSchema, "body"),
   authController.loginUser,
+)
+
+// Google Login (Google's own sign-in stands in for the bot check)
+router.post(
+  "/google",
+  rateLimit({ prefix: "google", limit: 20, window: "15 m" }),
+  validate(googleLoginSchema, "body"),
+  authController.googleLogin,
 )
 
 // Refresh Tokens

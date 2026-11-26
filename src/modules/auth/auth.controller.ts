@@ -6,6 +6,7 @@ import { sendResponse } from "../../utils/send-response.js"
 import type {
   ChangePasswordPayload,
   ForgotPasswordPayload,
+  GoogleLoginPayload,
   LoginUserPayload,
   RefreshTokenPayload,
   RegisterUserPayload,
@@ -51,6 +52,17 @@ const loginUser = async (req: Request<{}, {}, LoginUserPayload>, res: Response) 
     success: true,
     statusCode: httpStatus.OK,
     message: "Logged in successfully",
+    data: result,
+  })
+}
+
+const googleLogin = async (req: Request<{}, {}, GoogleLoginPayload>, res: Response) => {
+  const result = await authService.googleLogin(req.body)
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Logged in with Google successfully",
     data: result,
   })
 }
@@ -112,6 +124,7 @@ export const authController = {
   registerUser,
   verifyEmail,
   loginUser,
+  googleLogin,
   refreshTokens,
   logoutUser,
   forgotPassword,

@@ -2,6 +2,7 @@ import { createHash, randomInt, timingSafeEqual } from "crypto"
 
 import httpStatus from "http-status"
 
+import { verifyGoogleIdToken } from "../../lib/google.js"
 import { sendMail } from "../../lib/mailer.js"
 import { prisma } from "../../lib/prisma.js"
 import { redis } from "../../lib/redis.js"
@@ -10,6 +11,7 @@ import { resetPasswordTemplate, verifyEmailTemplate } from "./auth.emails.js"
 import type {
   ChangePasswordPayload,
   ForgotPasswordPayload,
+  GoogleLoginPayload,
   LoginUserPayload,
   RefreshTokenPayload,
   RegisterUserPayload,
@@ -175,6 +177,60 @@ const loginUser = async ({ email, password }: LoginUserPayload) => {
   return issueSession(user)
 }
 
+/*
+One user per email. Signs in the user with this Google account, or links Google to the user with
+the same email, or creates a user without a password. An email is only trusted once Google has
+verified it, so nobody can take over an account through an unverified Google address
+*/
+const googleLogin = async ({ idToken }: GoogleLoginPayload) => {
+  const profile = await verifyGoogleIdToken(idToken).catch((error: unknown) => {
+    console.error("Google ID token check failed:", error instanceof Error ? error.message : error)
+    throw new AppError(httpStatus.UNAUTHORIZED, "Invalid or expired Google token")
+  })
+
+  if (!profile?.email || !profile.email_verified) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Your Google email isn't verified")
+  }
+
+  const googleId = profile.sub
+  const email = profile.email.toLowerCase()
+
+  let user = await prisma.user.findUnique({ where: { googleId }, select: authUserSelect })
+
+  if (!user) {
+    const existing = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, googleId: true },
+    })
+
+    if (existing?.googleId) {
+      throw new AppError(httpStatus.CONFLICT, "This email is linked to another Google account")
+    }
+
+    // The unique email and googleId indexes turn a parallel first login into a 409
+    user = existing
+      ? await prisma.user.update({
+          where: { id: existing.id },
+          data: { googleId },
+          select: authUserSelect,
+        })
+      : await prisma.user.create({
+          data: {
+            name: (profile.name?.trim() || email.split("@")[0]!).slice(0, 100),
+            email,
+            googleId,
+          },
+          select: authUserSelect,
+        })
+  }
+
+  if (user.isBanned) {
+    throw new AppError(httpStatus.FORBIDDEN, "Your account has been banned")
+  }
+
+  return issueSession(user)
+}
+
 // Refresh tokens aren't rotated: each stays valid until it expires or the user logs out
 const refreshTokens = async ({ refreshToken }: RefreshTokenPayload) => {
   const user = await findSessionUser(authUtils.verifyRefreshToken(refreshToken))
@@ -271,6 +327,7 @@ export const authService = {
   registerUser,
   verifyEmail,
   loginUser,
+  googleLogin,
   refreshTokens,
   logoutUser,
   forgotPassword,

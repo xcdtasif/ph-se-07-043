@@ -68,3 +68,9 @@ export const changePasswordSchema = z
   })
 
 export type ChangePasswordPayload = z.output<typeof changePasswordSchema>
+
+export const googleLoginSchema = z.strictObject({
+  idToken: z.string().min(1).max(4096),
+})
+
+export type GoogleLoginPayload = z.output<typeof googleLoginSchema>

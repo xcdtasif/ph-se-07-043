@@ -66,6 +66,12 @@ Edit the email and password in the **Log In User** body to switch accounts.
 2. Send **Verify Email** with that email and code within 10 minutes. It creates the account and
    saves the tokens like **Log In User**.
 
+## Google Login
+
+**Google Login** needs an ID token that only Google's sign-in button can produce, and it expires
+after an hour. Sign in with Google on the frontend, copy the `credential` it receives (or the
+`idToken` the frontend sends) from the browser's network tab, and paste it into the body.
+
 ## Resetting A Password
 
 1. Send **Forgot Password** with an email you can read. It mails a 6-digit code.

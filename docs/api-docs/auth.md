@@ -9,6 +9,7 @@
 | [Register User](#register-user)     | `POST /api/v1/auth/register {…}`         | Public        |
 | [Verify Email](#verify-email)       | `POST /api/v1/auth/verify-email {…}`     | Public        |
 | [Log In User](#log-in-user)         | `POST /api/v1/auth/login {…}`            | Public        |
+| [Google Login](#google-login)       | `POST /api/v1/auth/google {…}`           | Public        |
 | [Refresh Tokens](#refresh-tokens)   | `POST /api/v1/auth/refresh-token {…}`    | Public        |
 | [Log Out User](#log-out-user)       | `POST /api/v1/auth/logout`               | Authenticated |
 | [Forgot Password](#forgot-password) | `POST /api/v1/auth/forgot-password {…}`  | Public        |
@@ -17,7 +18,7 @@
 
 ## Tokens
 
-Verify Email, Log In User, Refresh Tokens and Change Password return an `accessToken` and a
+Verify Email, Log In User, Google Login, Refresh Tokens and Change Password return an `accessToken` and a
 `refreshToken`. Send the access token on every protected request:
 
 ```
@@ -60,7 +61,7 @@ send:
 ## Rate Limits
 
 Counted per IP address and email, so one account can't be guessed at from one address without
-locking it for everyone else. Change Password is counted per IP. Every route also shares a limit of
+locking it for everyone else. Google Login and Change Password are counted per IP. Every route also shares a limit of
 100 requests a minute per IP.
 
 | Endpoint        | Limit             |
@@ -68,6 +69,7 @@ locking it for everyone else. Change Password is counted per IP. Every route als
 | Register User   | 5 per hour        |
 | Verify Email    | 10 per 10 minutes |
 | Log In User     | 10 per 15 minutes |
+| Google Login    | 20 per 15 minutes |
 | Forgot Password | 5 per hour        |
 | Reset Password  | 10 per 10 minutes |
 | Change Password | 10 per 15 minutes |
@@ -202,6 +204,46 @@ Signs in with email and password.
 | 400    | Validation failed       | `Validation of body failed`    |
 | 401    | Wrong email or password | `Invalid email or password`    |
 | 403    | Account is banned       | `Your account has been banned` |
+
+---
+
+## Google Login
+
+`POST /api/v1/auth/google` · Public
+
+Signs in with the ID token from the frontend's Sign in with Google button. One account per email:
+
+- A user who has signed in with this Google account before is signed in.
+- Otherwise, if a user already has the email, Google is linked to that account and they can use
+  either way to sign in.
+- Otherwise a new account is created, without a password. Forgot Password sets one.
+
+Only emails Google has verified are accepted. No bot check: Google's sign-in replaces it.
+
+**Body**
+
+| Field     | Type   | Rules                                   |
+| --------- | ------ | --------------------------------------- |
+| `idToken` | string | The `credential` from the Google button |
+
+**Example**
+
+```json
+{
+  "idToken": "<Google ID token>"
+}
+```
+
+**Responses**
+
+| Status | When                                           | Message                                          |
+| ------ | ---------------------------------------------- | ------------------------------------------------ |
+| 200    | Success                                        | `Logged in with Google successfully`             |
+| 400    | Validation failed                              | `Validation of body failed`                      |
+| 400    | Google hasn't verified the email               | `Your Google email isn't verified`               |
+| 401    | Token invalid, expired or for another app      | `Invalid or expired Google token`                |
+| 403    | Account is banned                              | `Your account has been banned`                   |
+| 409    | Email already linked to another Google account | `This email is linked to another Google account` |
 
 ---
 
