@@ -1,0 +1,9 @@
+_inbox
+_ph
+.fallow
+dist
+node_modules
+
+.env*
+!.env.example
+AGENTS.md

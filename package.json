@@ -1,0 +1,43 @@
+{
+  "name": "ph-se-07-043",
+  "version": "0.1.0",
+  "description": "GridLine: load-shedding schedules, outage handling and technician hiring for a power distribution company",
+  "keywords": [],
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "clean": "rm -rf dist",
+    "build": "pnpm clean && tsc",
+    "start": "node dist/server.js",
+    "fmt": "oxfmt",
+    "lint": "oxlint --fix"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "http-status": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.10",
+    "oxfmt": "^0.80.0",
+    "oxlint": "^1.95.0",
+    "oxlint-tsgolint": "^7.0.2008",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.23.0",
+      "onFail": "download"
+    }
+  },
+  "engines": {
+    "node": "24.x"
+  },
+  "packageManager": "pnpm@12.23.0"
+}
