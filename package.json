@@ -16,11 +16,16 @@
     "lint": "oxlint --fix"
   },
   "dependencies": {
+    "@upstash/ratelimit": "^2.2.2",
+    "@upstash/redis": "^1.41.1",
+    "cors": "^2.8.6",
     "dotenv": "^18.0.10",
     "express": "^5.3.0",
+    "helmet": "^8.3.0",
     "http-status": "^2.1.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.10",
     "oxfmt": "^0.80.0",

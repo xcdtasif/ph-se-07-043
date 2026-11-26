@@ -30,4 +30,8 @@ if (!validNodeEnv.includes(nodeEnv)) {
 export const env = {
   NODE_ENV: nodeEnv,
   PORT: getEnvAsNumber("PORT"),
+  CLIENT_URL: getEnv("CLIENT_URL"),
+
+  UPSTASH_REDIS_REST_URL: getEnv("UPSTASH_REDIS_REST_URL"),
+  UPSTASH_REDIS_REST_TOKEN: getEnv("UPSTASH_REDIS_REST_TOKEN"),
 } as const
