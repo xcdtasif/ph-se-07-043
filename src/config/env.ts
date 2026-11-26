@@ -1,8 +1,10 @@
 import path from "path"
 
 import dotenv from "dotenv"
+import ms from "ms"
+import type { StringValue } from "ms"
 
-dotenv.config({ path: path.join(process.cwd(), ".env.local"), quiet: true })
+dotenv.config({ path: path.join(process.cwd(), ".env.local") })
 
 function getEnv(key: string): string {
   const value = process.env[key]
@@ -20,22 +22,46 @@ function getEnvAsNumber(key: string): number {
   return value
 }
 
-const validNodeEnv = ["development", "production"]
+function getEnvAsDuration(key: string): StringValue {
+  const value = getEnv(key) as StringValue
+  const duration = ms(value)
+
+  // ms returns undefined for unparsable input and accepts negatives like "-1d".
+  // jsonwebtoken rounds down to whole seconds, so anything under 1s expires at once.
+  if (!Number.isFinite(duration) || duration < 1000) {
+    throw new Error(
+      `Environment variable ${key} must be longer than 1 sec, like "15m", "7d" or "2 days"`,
+    )
+  }
+
+  return value
+}
+
 const nodeEnv = getEnv("NODE_ENV")
+const validNodeEnv = ["development", "production"]
 
 if (!validNodeEnv.includes(nodeEnv)) {
   throw new Error(`Invalid NODE_ENV: ${nodeEnv}`)
 }
 
 export const env = {
-  NODE_ENV: nodeEnv,
+  NODE_ENV: getEnv("NODE_ENV"),
   PORT: getEnvAsNumber("PORT"),
   CLIENT_URL: getEnv("CLIENT_URL"),
 
   DATABASE_URL: getEnv("DATABASE_URL"),
+  DATABASE_URL_UNPOOLED: getEnv("DATABASE_URL_UNPOOLED"),
 
   UPSTASH_REDIS_REST_URL: getEnv("UPSTASH_REDIS_REST_URL"),
   UPSTASH_REDIS_REST_TOKEN: getEnv("UPSTASH_REDIS_REST_TOKEN"),
 
   BCRYPT_SALT_ROUNDS: getEnvAsNumber("BCRYPT_SALT_ROUNDS"),
+
+  JWT_ACCESS_SECRET: getEnv("JWT_ACCESS_SECRET"),
+  JWT_ACCESS_TOKEN_EXPIRES_IN: getEnvAsDuration("JWT_ACCESS_TOKEN_EXPIRES_IN"),
+  JWT_REFRESH_SECRET: getEnv("JWT_REFRESH_SECRET"),
+  JWT_REFRESH_TOKEN_EXPIRES_IN: getEnvAsDuration("JWT_REFRESH_TOKEN_EXPIRES_IN"),
+
+  SMTP_USER: getEnv("SMTP_USER"),
+  SMTP_PASS: getEnv("SMTP_PASS"),
 } as const

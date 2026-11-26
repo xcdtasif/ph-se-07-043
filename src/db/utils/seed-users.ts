@@ -1,6 +1,6 @@
 import type { EmployeeRole } from "../../generated/prisma/enums.js"
 import { prisma } from "../../lib/prisma.js"
-import { hashPassword } from "../../utils/password.js"
+import { authUtils } from "../../modules/auth/auth.utils.js"
 import { logCount } from "./log-count.js"
 
 // Every seed user except Admin 01 logs in with this; the frontend's demo buttons send it too
@@ -32,7 +32,7 @@ export const seedUsers = async (users: SeedUser[], singular: string, plural: str
     select: { id: true, code: true },
   })
   const zoneIds = new Map(zones.map((zone) => [zone.code, zone.id]))
-  const password = await hashPassword(SEED_PASSWORD)
+  const password = await authUtils.hashPassword(SEED_PASSWORD)
 
   for (const { employee, ...user } of missing) {
     let employees

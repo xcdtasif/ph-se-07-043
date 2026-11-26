@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma.js"
-import { hashPassword } from "../../utils/password.js"
+import { authUtils } from "../../modules/auth/auth.utils.js"
 import { logCount } from "../utils/log-count.js"
 
 // Read here, not in config/env.ts: only the seed needs them, and they can differ per database
@@ -30,7 +30,7 @@ export const seedAdmin = async () => {
     data: {
       name,
       email,
-      password: await hashPassword(password),
+      password: await authUtils.hashPassword(password),
       employees: { create: { role: "ADMIN" } },
     },
   })

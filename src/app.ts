@@ -21,7 +21,7 @@ app.use(rateLimit({ prefix: "global", limit: 100, window: "1 m" }))
 app.use(express.json())
 
 app.get("/api/v1/health", (_req, res) => {
-  sendResponse(res, { statusCode: httpStatus.OK, message: "Server is running" })
+  sendResponse(res, { success: true, statusCode: httpStatus.OK, message: "Server is running" })
 })
 
 app.use(notFound)
