@@ -32,6 +32,10 @@ export const env = {
   PORT: getEnvAsNumber("PORT"),
   CLIENT_URL: getEnv("CLIENT_URL"),
 
+  DATABASE_URL: getEnv("DATABASE_URL"),
+
   UPSTASH_REDIS_REST_URL: getEnv("UPSTASH_REDIS_REST_URL"),
   UPSTASH_REDIS_REST_TOKEN: getEnv("UPSTASH_REDIS_REST_TOKEN"),
+
+  BCRYPT_SALT_ROUNDS: getEnvAsNumber("BCRYPT_SALT_ROUNDS"),
 } as const

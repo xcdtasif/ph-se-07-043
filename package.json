@@ -12,13 +12,20 @@
     "clean": "rm -rf dist",
     "build": "pnpm clean && tsc",
     "start": "node dist/server.js",
+    "db:migrate": "prisma format && prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:seed": "tsx src/db/seed.ts",
+    "db:delete": "tsx src/db/delete.ts",
     "fmt": "oxfmt",
     "lint": "oxlint --fix",
     "vc:env-sync": "bash scripts/vercel-env-sync.sh"
   },
   "dependencies": {
+    "@prisma/adapter-neon": "7.10.1",
+    "@prisma/client": "7.10.1",
     "@upstash/ratelimit": "^2.2.2",
     "@upstash/redis": "^1.41.1",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^18.0.10",
     "express": "^5.3.0",
@@ -26,12 +33,16 @@
     "http-status": "^2.1.0"
   },
   "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.17.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.10",
     "oxfmt": "^0.80.0",
     "oxlint": "^1.95.0",
     "oxlint-tsgolint": "^7.0.2008",
+    "prisma": "7.10.1",
+    "prisma-erd-generator": "^3.2.1",
+    "puppeteer": "^25.18.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   },

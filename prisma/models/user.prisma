@@ -1,0 +1,43 @@
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String
+  password     String?
+  googleId     String?  @map("google_id")
+  isBanned     Boolean  @default(false) @map("is_banned")
+  tokenVersion Int      @default(0) @map("token_version")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  employees Employee[]
+
+  @@unique([email])
+  @@unique([googleId])
+  @@map("users")
+}
+
+// A user's job with the company. Ending employment sets endedAt; the row stays as history.
+model Employee {
+  id        String       @id @default(uuid())
+  userId    String       @map("user_id")
+  role      EmployeeRole
+  // null only for ADMIN, who covers every zone
+  zoneId    String?      @map("zone_id")
+  endedAt   DateTime?    @map("ended_at")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  user User  @relation(fields: [userId], references: [id])
+  zone Zone? @relation(fields: [zoneId], references: [id])
+
+  @@unique([userId], map: "employees_user_id_active_key", where: raw("ended_at IS NULL"))
+  @@unique([zoneId], map: "employees_zone_id_active_manager_key", where: raw("role = 'ZONE_MANAGER' AND ended_at IS NULL"))
+  @@index([zoneId])
+  @@map("employees")
+}
+
+enum EmployeeRole {
+  ADMIN
+  ZONE_MANAGER
+  TECHNICIAN
+}

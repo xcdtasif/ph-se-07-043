@@ -1,0 +1,16 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator erd {
+  provider                  = "prisma-erd-generator"
+  output                    = "../docs/erd.svg"
+  includeRelationFromFields = true
+  showIndexes               = true
+}

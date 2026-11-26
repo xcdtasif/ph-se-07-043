@@ -1,0 +1,48 @@
+model Zone {
+  id        String    @id @default(uuid())
+  name      String
+  code      String
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  feeders   Feeder[]
+  employees Employee[]
+
+  @@unique([code], map: "zones_code_active_key", where: raw("deleted_at IS NULL"))
+  @@map("zones")
+}
+
+// Load shedding and trips happen per feeder
+model Feeder {
+  id        String    @id @default(uuid())
+  zoneId    String    @map("zone_id")
+  name      String
+  code      String
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  zone  Zone   @relation(fields: [zoneId], references: [id])
+  areas Area[]
+
+  @@unique([code], map: "feeders_code_active_key", where: raw("deleted_at IS NULL"))
+  @@index([zoneId])
+  @@map("feeders")
+}
+
+// What customers know; each area is on one feeder
+model Area {
+  id        String    @id @default(uuid())
+  feederId  String    @map("feeder_id")
+  name      String
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  feeder Feeder @relation(fields: [feederId], references: [id])
+
+  @@unique([feederId, name], map: "areas_feeder_id_name_active_key", where: raw("deleted_at IS NULL"))
+  @@index([feederId])
+  @@map("areas")
+}

@@ -4,6 +4,7 @@ _ph
 .vercel
 dist
 node_modules
+src/generated/prisma
 
 .env*
 !.env.example
