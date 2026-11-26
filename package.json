@@ -13,7 +13,8 @@
     "build": "pnpm clean && tsc",
     "start": "node dist/server.js",
     "fmt": "oxfmt",
-    "lint": "oxlint --fix"
+    "lint": "oxlint --fix",
+    "vc:env-sync": "bash scripts/vercel-env-sync.sh"
   },
   "dependencies": {
     "@upstash/ratelimit": "^2.2.2",

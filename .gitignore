@@ -1,6 +1,7 @@
 _inbox
 _ph
 .fallow
+.vercel
 dist
 node_modules
 
