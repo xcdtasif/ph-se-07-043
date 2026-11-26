@@ -36,6 +36,13 @@ request, except the `Public` folders, which send none.
 
 `401` means the token is missing, expired, or was issued before a logout. Log in again.
 
+### Bot Check
+
+**Register User** and **Log In User** send `"turnstileToken": "XXXX.DUMMY.TOKEN.XXXX"`. That's
+Cloudflare's dummy token, which the API accepts while `TURNSTILE_SECRET_KEY` is Cloudflare's test
+secret (`1x0000000000000000000000000000000AA`), as it is on the deployed API. With a real secret,
+only a token from the frontend's widget passes.
+
 ### Sample Accounts
 
 `pnpm db:seed` creates these. All but the admin use the password `1a2s3d4f`.

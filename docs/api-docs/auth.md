@@ -21,6 +21,37 @@ Authorization: Bearer <accessToken>
 
 Their lifetimes come from `JWT_ACCESS_TOKEN_EXPIRES_IN` and `JWT_REFRESH_TOKEN_EXPIRES_IN`.
 
+## Bot Check
+
+Register User and Log In User need a Cloudflare Turnstile token in the body as `turnstileToken`.
+The frontend gets it from the Turnstile widget. Each token works once and expires after 5 minutes.
+
+The deployed API uses Cloudflare's test secret, which accepts only the dummy token, so from Postman
+send:
+
+```json
+"turnstileToken": "XXXX.DUMMY.TOKEN.XXXX"
+```
+
+| Status | When                                   | Message                                      |
+| ------ | -------------------------------------- | -------------------------------------------- |
+| 400    | Token missing                          | `Bot check required`                         |
+| 400    | Token invalid, expired or already used | `Bot check failed, refresh it and try again` |
+| 502    | Cloudflare couldn't be reached         | `Couldn't run the bot check, try again`      |
+
+## Rate Limits
+
+Counted per IP address and email, so one account can't be guessed at from one address without
+locking it for everyone else. Every route also shares a limit of 100 requests a minute per IP.
+
+| Endpoint      | Limit             |
+| ------------- | ----------------- |
+| Register User | 5 per hour        |
+| Verify Email  | 10 per 10 minutes |
+| Log In User   | 10 per 15 minutes |
+
+Over the limit returns `429 Too many requests, try again in N seconds` with a `Retry-After` header.
+
 ## User Object
 
 Returned by every auth endpoint that responds with a user. The password is never included.
@@ -52,11 +83,12 @@ replaces the old one.
 
 **Body**
 
-| Field      | Type   | Rules                                   |
-| ---------- | ------ | --------------------------------------- |
-| `name`     | string | Trimmed, 2 to 100 characters            |
-| `email`    | string | Valid email, trimmed and lowercased     |
-| `password` | string | At least 8 characters, at most 72 bytes |
+| Field            | Type   | Rules                                   |
+| ---------------- | ------ | --------------------------------------- |
+| `name`           | string | Trimmed, 2 to 100 characters            |
+| `email`          | string | Valid email, trimmed and lowercased     |
+| `password`       | string | At least 8 characters, at most 72 bytes |
+| `turnstileToken` | string | See [Bot Check](#bot-check)             |
 
 **Example**
 
@@ -64,7 +96,8 @@ replaces the old one.
 {
   "name": "New Customer",
   "email": "newcustomer@example.com",
-  "password": "1a2s3d4f"
+  "password": "1a2s3d4f",
+  "turnstileToken": "XXXX.DUMMY.TOKEN.XXXX"
 }
 ```
 
@@ -123,17 +156,19 @@ Signs in with email and password.
 
 **Body**
 
-| Field      | Type   | Rules                               |
-| ---------- | ------ | ----------------------------------- |
-| `email`    | string | Valid email, trimmed and lowercased |
-| `password` | string | Required                            |
+| Field            | Type   | Rules                               |
+| ---------------- | ------ | ----------------------------------- |
+| `email`          | string | Valid email, trimmed and lowercased |
+| `password`       | string | Required                            |
+| `turnstileToken` | string | See [Bot Check](#bot-check)         |
 
 **Example**
 
 ```json
 {
   "email": "technician01@example.com",
-  "password": "1a2s3d4f"
+  "password": "1a2s3d4f",
+  "turnstileToken": "XXXX.DUMMY.TOKEN.XXXX"
 }
 ```
 

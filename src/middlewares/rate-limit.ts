@@ -16,6 +16,17 @@ type RateLimitOptions = {
 const byIp = (req: Request) => req.ip ?? "unknown"
 
 /*
+For auth routes: limits guesses against one account from one address without locking the
+account for everyone else. Runs before validation, so the email is normalised here
+*/
+export const byIpAndEmail = (req: Request) => {
+  const email: unknown = req.body?.email
+  const normalised = typeof email === "string" ? email.trim().toLowerCase() : ""
+
+  return `${byIp(req)}:${normalised}`
+}
+
+/*
 Counters live in Redis because serverless instances share no memory. If Redis is down or slower
 than `timeout`, requests pass: a missing rate limit is better than a missing API
 */
