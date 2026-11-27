@@ -1,6 +1,7 @@
 import { prisma } from "../lib/prisma.js"
 import { seedAdmin } from "./seeders/admin.js"
 import { seedApplications } from "./seeders/applications.js"
+import { seedAuditLogs } from "./seeders/audit-logs.js"
 import { seedCustomers } from "./seeders/customers.js"
 import { seedGrid } from "./seeders/grid.js"
 import { seedJobPostings } from "./seeders/job-postings.js"
@@ -23,6 +24,8 @@ try {
   await seedOutages()
   await seedJobPostings()
   await seedApplications()
+  // Last: it logs what the seeders above created
+  await seedAuditLogs()
 } catch (error) {
   console.error("Seeding failed:", error)
   process.exitCode = 1

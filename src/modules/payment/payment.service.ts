@@ -8,12 +8,13 @@ import { sendMail } from "../../lib/mailer.js"
 import { prisma } from "../../lib/prisma.js"
 import { stripe } from "../../lib/stripe.js"
 import { AppError } from "../../utils/app-error.js"
+import { dhakaDaysFilter } from "../../utils/dhaka-time.js"
 import { lockLiveRow } from "../../utils/lock-live-row.js"
 import type { AuthUser } from "../auth/auth.user.js"
 import { isOpenPosting } from "../job-posting/job-posting.service.js"
 import { invoiceEmailTemplate } from "./payment.emails.js"
 import { buildInvoicePdf, invoiceFilename, toInvoiceNumber } from "./payment.invoice.js"
-import type { MyPaymentsQuery } from "./payment.schema.js"
+import type { AdminPaymentsQuery, MyPaymentsQuery } from "./payment.schema.js"
 
 const CURRENCY = "bdt"
 
@@ -52,6 +53,17 @@ const paymentSelect = {
           zone: { select: { id: true, name: true, code: true } },
         },
       },
+    },
+  },
+} as const
+
+// An admin also sees who paid
+const adminPaymentSelect = {
+  ...paymentSelect,
+  application: {
+    select: {
+      ...paymentSelect.application.select,
+      user: { select: { id: true, name: true, email: true } },
     },
   },
 } as const
@@ -362,6 +374,36 @@ const getMyPayments = async (user: AuthUser, query: MyPaymentsQuery) => {
   return { payments, meta: { page, limit, total } }
 }
 
+// Every payment, newest first, filtered by status, payer or invoice number, and the day it opened
+const getAllPayments = async (query: AdminPaymentsQuery) => {
+  const { page, limit, status, search, from, to } = query
+
+  const where: Prisma.PaymentWhereInput = {
+    ...(status && { status }),
+    ...((from || to) && { createdAt: dhakaDaysFilter(from, to) }),
+    ...(search && {
+      OR: [
+        { invoiceNumber: { contains: search, mode: "insensitive" } },
+        { application: { user: { name: { contains: search, mode: "insensitive" } } } },
+        { application: { user: { email: { contains: search, mode: "insensitive" } } } },
+      ],
+    }),
+  }
+
+  const [payments, total] = await Promise.all([
+    prisma.payment.findMany({
+      where,
+      select: adminPaymentSelect,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.payment.count({ where }),
+  ])
+
+  return { payments, meta: { page, limit, total } }
+}
+
 // The payer's invoice as a PDF; an admin can download anyone's
 const getInvoice = async (user: AuthUser, paymentId: string) => {
   const payment = await prisma.payment.findUnique({
@@ -390,5 +432,6 @@ export const paymentService = {
   createCheckout,
   handleWebhook,
   getMyPayments,
+  getAllPayments,
   getInvoice,
 }

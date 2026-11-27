@@ -1,5 +1,6 @@
 import z from "zod"
 
+import { dateSchema } from "../../utils/date-schema.js"
 import { dhakaDate, shiftDate } from "../../utils/dhaka-time.js"
 import { SCHEDULE_MAX_DAYS, slotWindowIssues } from "./schedule.rules.js"
 
@@ -45,8 +46,6 @@ export const confirmDaySchema = z.strictObject({
 })
 
 export type ConfirmDayPayload = z.output<typeof confirmDaySchema>
-
-const dateSchema = z.iso.date({ error: "Use a date like 2026-11-28" })
 
 /*
 One feeder filter, and a range of Dhaka days: today alone is `from=<today>&to=<today>`, and the

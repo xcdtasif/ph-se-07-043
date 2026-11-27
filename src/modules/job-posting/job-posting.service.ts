@@ -35,7 +35,7 @@ const toDateValue = (date: string) => new Date(`${date}T00:00:00Z`)
 const toDateString = (date: Date) => date.toISOString().slice(0, 10)
 
 // Open means applicants can still apply: not closed, and the deadline day hasn't ended in Dhaka
-const openWhere = (today: string): Prisma.JobPostingWhereInput => ({
+export const openWhere = (today: string): Prisma.JobPostingWhereInput => ({
   status: "OPEN",
   deadline: { gte: toDateValue(today) },
 })

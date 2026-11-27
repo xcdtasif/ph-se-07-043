@@ -20,3 +20,9 @@ export const dhakaDayRange = (date: string) => {
 // A calendar date (YYYY-MM-DD) `days` days later, e.g. shiftDate("2026-11-28", 6) is 2026-12-04
 export const shiftDate = (date: string, days: number) =>
   new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10)
+
+// A timestamp filter for the Dhaka days `from` to `to`, both included; either end may be open
+export const dhakaDaysFilter = (from?: string, to?: string) => ({
+  ...(from && { gte: dhakaDayRange(from).start }),
+  ...(to && { lt: dhakaDayRange(to).end }),
+})

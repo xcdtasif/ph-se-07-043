@@ -16,6 +16,7 @@ checkout stays open for 35 minutes.
 | [Pay Application Fee](#pay-application-fee) | `POST /api/v1/applications/:id/pay` | Authenticated, its applicant  |
 | [Get My Payments](#get-my-payments)         | `GET /api/v1/payments/me?…`         | Authenticated                 |
 | [Download Invoice](#download-invoice)       | `GET /api/v1/payments/:id/invoice`  | Authenticated, payer or Admin |
+| [Get All Payments](#get-all-payments)       | `GET /api/v1/admin/payments?…`      | Admin                         |
 | [Stripe Webhook](#stripe-webhook)           | `POST /api/v1/stripe/webhook`       | Stripe (signed)               |
 
 The endpoints for users can also answer:
@@ -24,6 +25,8 @@ The endpoints for users can also answer:
 | ------ | ----------------- | ------------------------------ |
 | 401    | Token rejected    | See [Tokens](auth.md#tokens)   |
 | 403    | Account is banned | `Your account has been banned` |
+
+Get All Payments also answers `403 You don't have permission to do this` to anyone but an admin.
 
 Stripe's own failures answer `429 Payment provider is busy, try again`,
 `503 Payment provider unavailable` or `502 Payment provider error`.
@@ -140,6 +143,67 @@ on each request, so a lost email doesn't lose the invoice. Errors answer in JSON
 | 403    | Someone else's payment, not Admin | `This payment isn't yours`                |
 | 404    | No payment with this id           | `Payment not found`                       |
 | 409    | `PENDING` or `FAILED`             | `Only a completed payment has an invoice` |
+
+---
+
+## Get All Payments
+
+`GET /api/v1/admin/payments?…` · Admin
+
+Lists every [payment](#payment-object), newest first, with the payer added to `application` as
+`user`. `meta` holds `page`, `limit` and `total`.
+
+**Query**
+
+| Param    | Rules                                                                                | Default |
+| -------- | ------------------------------------------------------------------------------------ | ------- |
+| `page`   | Integer ≥ 1                                                                          | `1`     |
+| `limit`  | Integer 1–50                                                                         | `10`    |
+| `status` | `PENDING`, `COMPLETED` or `FAILED`                                                   | —       |
+| `search` | 1–100 characters; part of the payer's name or email, or the invoice number, any case | —       |
+| `from`   | First day the checkout opened on (Dhaka), like `2026-11-01`                          | —       |
+| `to`     | Last day, on or after `from`                                                         | —       |
+
+**Example**
+
+`GET /api/v1/admin/payments?status=COMPLETED&search=customer01&from=2026-11-01&to=2026-11-30`
+
+```json
+[
+  {
+    "id": "ac655c71-b6dc-4d48-84be-f740622f7400",
+    "amount": 1000,
+    "currency": "bdt",
+    "status": "COMPLETED",
+    "paidAt": "2026-11-26T16:01:14.152Z",
+    "invoiceNumber": "GL-20261126-AC655C71",
+    "createdAt": "2026-11-26T15:59:14.152Z",
+    "updatedAt": "2026-11-26T16:01:14.152Z",
+    "application": {
+      "id": "d408d62d-a866-4334-a2b4-7b9e07f18536",
+      "status": "SHORTLISTED",
+      "jobPosting": {
+        "id": "0e19bb13-cd46-444f-b961-95386d510a88",
+        "title": "Zone Manager, Uttara",
+        "role": "ZONE_MANAGER",
+        "zone": { "id": "e7eb61e2-89f3-4967-8a4f-5039a23416a9", "name": "Uttara", "code": "UTT" }
+      },
+      "user": {
+        "id": "ebc6183f-f6bb-4c04-8e1d-e1282a8fffb3",
+        "name": "Customer 01",
+        "email": "customer01@example.com"
+      }
+    }
+  }
+]
+```
+
+**Responses**
+
+| Status | When              | Message                         |
+| ------ | ----------------- | ------------------------------- |
+| 200    | Success           | `Payments fetched successfully` |
+| 400    | Validation failed | `Validation of query failed`    |
 
 ---
 

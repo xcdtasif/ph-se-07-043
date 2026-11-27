@@ -8,6 +8,7 @@ import { env } from "./config/env.js"
 import { errorHandler } from "./middlewares/error-handler.js"
 import { notFound } from "./middlewares/not-found.js"
 import { rateLimit } from "./middlewares/rate-limit.js"
+import { adminRouter } from "./modules/admin/admin.routes.js"
 import { analyticsRouter } from "./modules/analytics/analytics.routes.js"
 import { applicationRouter } from "./modules/application/application.routes.js"
 import { areaRouter } from "./modules/area/area.routes.js"
@@ -18,7 +19,11 @@ import { feederRouter } from "./modules/feeder/feeder.routes.js"
 import { jobPostingRouter } from "./modules/job-posting/job-posting.routes.js"
 import { outageReportRouter } from "./modules/outage-report/outage-report.routes.js"
 import { outageRouter } from "./modules/outage/outage.routes.js"
-import { paymentRouter, stripeWebhookRouter } from "./modules/payment/payment.routes.js"
+import {
+  adminPaymentRouter,
+  paymentRouter,
+  stripeWebhookRouter,
+} from "./modules/payment/payment.routes.js"
 import { scheduleRouter } from "./modules/schedule/schedule.routes.js"
 import { adminUserRouter } from "./modules/user/user.admin.routes.js"
 import { userRouter } from "./modules/user/user.routes.js"
@@ -79,6 +84,8 @@ app.use("/api/v1/analytics", analyticsRouter)
 
 // Admin
 app.use("/api/v1/admin/users", adminUserRouter)
+app.use("/api/v1/admin/payments", adminPaymentRouter)
+app.use("/api/v1/admin", adminRouter)
 
 app.use(notFound)
 app.use(errorHandler)

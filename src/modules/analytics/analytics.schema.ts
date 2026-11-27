@@ -1,11 +1,10 @@
 import z from "zod"
 
+import { dateSchema } from "../../utils/date-schema.js"
 import { dhakaDate, shiftDate } from "../../utils/dhaka-time.js"
 
 export const ANALYTICS_DEFAULT_DAYS = 30
 export const ANALYTICS_MAX_DAYS = 366
-
-const dateSchema = z.iso.date({ error: "Use a date like 2026-11-28" })
 
 /*
 A range of Dhaka days, both included; the default is the last 30 ending today. A Zone Manager

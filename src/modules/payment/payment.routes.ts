@@ -1,10 +1,11 @@
 import express, { Router } from "express"
 
 import { authenticate } from "../../middlewares/authenticate.js"
+import { authorize } from "../../middlewares/authorize.js"
 import { validate } from "../../middlewares/validate.js"
 import { idParamsSchema } from "../../utils/id-params.js"
 import { paymentController } from "./payment.controller.js"
-import { myPaymentsQuerySchema } from "./payment.schema.js"
+import { adminPaymentsQuerySchema, myPaymentsQuerySchema } from "./payment.schema.js"
 
 const router = Router()
 
@@ -25,6 +26,19 @@ router.get(
 )
 
 export const paymentRouter = router
+
+const adminRouter = Router()
+
+// Get All Payments
+adminRouter.get(
+  "/",
+  authenticate,
+  authorize("ADMIN"),
+  validate(adminPaymentsQuerySchema, "query"),
+  paymentController.getAllPayments,
+)
+
+export const adminPaymentRouter = adminRouter
 
 const webhookRouter = Router()
 
