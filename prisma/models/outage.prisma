@@ -32,23 +32,33 @@ enum OutageReportStatus {
 }
 
 // An unplanned power cut a Zone Manager confirmed in some areas of their zone. Active until
-// RESTORED; an area is in at most one active outage, which confirming checks under the area locks
+// RESTORED; an area is in at most one active outage, which confirming checks under the area locks.
+// The Zone Manager assigns a technician of the zone, who starts the work and restores power
 model Outage {
   id            String       @id @default(uuid())
   zoneId        String       @map("zone_id")
   status        OutageStatus @default(CONFIRMED)
+  // Set by the technician after inspection; required to restore
+  cause         OutageCause?
   // Shown on the public status page
   note          String?
   confirmedById String       @map("confirmed_by_id")
+  // The technician's employee row, so a later job under a new employment isn't mixed in
+  technicianId  String?      @map("technician_id")
   confirmedAt   DateTime     @default(now()) @map("confirmed_at")
+  assignedAt    DateTime?    @map("assigned_at")
+  startedAt     DateTime?    @map("started_at")
+  restoredAt    DateTime?    @map("restored_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
 
   zone        Zone           @relation(fields: [zoneId], references: [id])
   confirmedBy User           @relation(fields: [confirmedById], references: [id])
+  technician  Employee?      @relation(fields: [technicianId], references: [id])
   areas       OutageArea[]
   reports     OutageReport[]
 
   @@index([zoneId, status])
+  @@index([technicianId, status])
   @@map("outages")
 }
 
@@ -69,4 +79,12 @@ enum OutageStatus {
   ASSIGNED
   IN_PROGRESS
   RESTORED
+}
+
+enum OutageCause {
+  TRANSFORMER_FAULT
+  CABLE_DAMAGE
+  EMERGENCY_MAINTENANCE
+  TEMPORARY_TRIP
+  OTHER
 }

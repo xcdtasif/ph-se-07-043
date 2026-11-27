@@ -1,65 +1,182 @@
+import type { OutageCause } from "../../generated/prisma/enums.js"
 import { prisma } from "../../lib/prisma.js"
 import { logCount } from "../utils/log-count.js"
 
 const HOUR_MS = 60 * 60 * 1000
 
-/*
-A confirmed outage in Dhanmondi, which links Customer 04's pending report. Mirpur's reports stay
-pending, so its Zone Manager has something to confirm
-*/
-const OUTAGE = {
-  areaNames: ["Dhanmondi Road 27", "Dhanmondi Road 32"],
-  hoursAgo: 4,
-  note: "Fault near Road 27, crews are on the way",
+type SeedOutage = {
+  // Also the seed's key: an outage with this note is seeded once
+  note: string
+  areaNames: string[]
+  hoursAgo: number
+  // Hours after confirming
+  technician?: { email: string; assignedAfter: number }
+  startedAfter?: number
+  restoredAfter?: number
+  cause?: OutageCause
+  // Reports made just before confirming and linked; active outages also link the pending ones
+  reports?: { email: string; description?: string }[]
 }
 
-// Seeded once: running the seed again leaves existing outages alone
-export const seedOutages = async () => {
-  if ((await prisma.outage.count()) > 0) {
-    logCount(0, "outage", "outages", "seeded")
+/*
+One outage per status. Technician 01 has an outage in progress and two restored (one a temporary
+trip that cleared before work started); Technician 02 has an assigned one. Dhanmondi's confirmed
+outage links Customer 04's pending report and waits for a technician. Mirpur 10, Block C and
+Pallabi, Section 6 stay free, so their pending reports can be confirmed
+*/
+const OUTAGES: SeedOutage[] = [
+  {
+    note: "Fault near Road 27, crews are on the way",
+    areaNames: ["Dhanmondi Road 27", "Dhanmondi Road 32"],
+    hoursAgo: 4,
+  },
+  {
+    note: "Feeder breaker tripped, a technician is on the way",
+    areaNames: ["Pallabi, Section 7"],
+    hoursAgo: 1,
+    technician: { email: "technician02@example.com", assignedAfter: 0.25 },
+  },
+  {
+    note: "Underground cable damaged by roadwork, repairs underway",
+    areaNames: ["Mirpur 11, Block B", "Mirpur 12, Block D"],
+    hoursAgo: 3,
+    technician: { email: "technician01@example.com", assignedAfter: 0.5 },
+    startedAfter: 1,
+    cause: "CABLE_DAMAGE",
+  },
+  {
+    note: "Transformer failure, replaced and power restored",
+    areaNames: ["Mirpur 10, Block C"],
+    hoursAgo: 48,
+    technician: { email: "technician01@example.com", assignedAfter: 0.5 },
+    startedAfter: 1,
+    restoredAfter: 5,
+    cause: "TRANSFORMER_FAULT",
+    reports: [
+      { email: "customer01@example.com", description: "Loud bang from the transformer, then dark" },
+      { email: "customer02@example.com" },
+    ],
+  },
+  {
+    note: "Breaker tripped and reset itself",
+    areaNames: ["Mirpur 10, Block A"],
+    hoursAgo: 120,
+    technician: { email: "technician01@example.com", assignedAfter: 0.25 },
+    restoredAfter: 0.75,
+    cause: "TEMPORARY_TRIP",
+    reports: [{ email: "customer07@example.com", description: "Power flickered and went off" }],
+  },
+]
 
-    return
-  }
+const hoursAfter = (date: Date, hours: number) => new Date(date.getTime() + hours * HOUR_MS)
 
+const seedOutage = async (seed: SeedOutage) => {
   const areas = await prisma.area.findMany({
-    where: { name: { in: OUTAGE.areaNames }, deletedAt: null },
+    where: { name: { in: seed.areaNames }, deletedAt: null },
     select: { id: true, feeder: { select: { zoneId: true } } },
   })
   const zoneId = areas[0]?.feeder.zoneId
-  const manager =
-    zoneId &&
+
+  if (!zoneId || areas.length !== seed.areaNames.length) return false
+
+  const manager = await prisma.employee.findFirst({
+    where: { role: "ZONE_MANAGER", zoneId, endedAt: null },
+    select: { userId: true },
+  })
+  const technician =
+    seed.technician &&
     (await prisma.employee.findFirst({
-      where: { role: "ZONE_MANAGER", zoneId, endedAt: null },
-      select: { userId: true },
+      where: { role: "TECHNICIAN", zoneId, endedAt: null, user: { email: seed.technician.email } },
+      select: { id: true },
     }))
 
-  if (!zoneId || !manager) {
-    logCount(0, "outage", "outages", "seeded")
-
-    return
-  }
+  if (!manager || (seed.technician && !technician)) return false
 
   const areaIds = areas.map((area) => area.id)
-  const confirmedAt = new Date(Date.now() - OUTAGE.hoursAgo * HOUR_MS)
+  const confirmedAt = new Date(Date.now() - seed.hoursAgo * HOUR_MS)
+  const assignedAt = seed.technician && hoursAfter(confirmedAt, seed.technician.assignedAfter)
+  const startedAt =
+    seed.startedAfter === undefined ? null : hoursAfter(confirmedAt, seed.startedAfter)
+  const restoredAt =
+    seed.restoredAfter === undefined ? null : hoursAfter(confirmedAt, seed.restoredAfter)
+  const status = restoredAt
+    ? "RESTORED"
+    : startedAt
+      ? "IN_PROGRESS"
+      : technician
+        ? "ASSIGNED"
+        : "CONFIRMED"
+  const updatedAt = restoredAt ?? startedAt ?? assignedAt ?? confirmedAt
+
+  const customers = await prisma.customer.findMany({
+    where: { user: { email: { in: (seed.reports ?? []).map((report) => report.email) } } },
+    select: { id: true, areaId: true, user: { select: { email: true } } },
+  })
+  const customerByEmail = new Map(customers.map((customer) => [customer.user.email, customer]))
 
   await prisma.$transaction(async (tx) => {
     const outage = await tx.outage.create({
       data: {
         zoneId,
-        note: OUTAGE.note,
+        status,
+        cause: seed.cause ?? null,
+        note: seed.note,
         confirmedById: manager.userId,
+        technicianId: technician ? technician.id : null,
         confirmedAt,
-        updatedAt: confirmedAt,
+        assignedAt: assignedAt ?? null,
+        startedAt,
+        restoredAt,
+        updatedAt,
         areas: { createMany: { data: areaIds.map((areaId) => ({ areaId })) } },
       },
       select: { id: true },
     })
 
-    await tx.outageReport.updateMany({
-      where: { areaId: { in: areaIds }, status: "PENDING" },
-      data: { status: "LINKED", outageId: outage.id, updatedAt: confirmedAt },
+    const reportedAt = hoursAfter(confirmedAt, -0.5)
+
+    await tx.outageReport.createMany({
+      data: (seed.reports ?? []).flatMap(({ email, description }) => {
+        const customer = customerByEmail.get(email)
+
+        return customer
+          ? [
+              {
+                customerId: customer.id,
+                areaId: customer.areaId,
+                description: description ?? null,
+                status: "LINKED" as const,
+                outageId: outage.id,
+                createdAt: reportedAt,
+                updatedAt: confirmedAt,
+              },
+            ]
+          : []
+      }),
     })
+
+    if (status !== "RESTORED") {
+      await tx.outageReport.updateMany({
+        where: { areaId: { in: areaIds }, status: "PENDING" },
+        data: { status: "LINKED", outageId: outage.id, updatedAt: confirmedAt },
+      })
+    }
   })
 
-  logCount(1, "outage", "outages", "seeded")
+  return true
+}
+
+// Safe to run again: an outage whose note is already there is skipped
+export const seedOutages = async () => {
+  const existing = await prisma.outage.findMany({ select: { note: true } })
+  const seeded = new Set(existing.map((outage) => outage.note))
+  let count = 0
+
+  for (const seed of OUTAGES) {
+    if (!seeded.has(seed.note) && (await seedOutage(seed))) {
+      count++
+    }
+  }
+
+  logCount(count, "outage", "outages", "seeded")
 }

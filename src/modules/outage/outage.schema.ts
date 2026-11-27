@@ -1,6 +1,6 @@
 import z from "zod"
 
-import { OutageStatus } from "../../generated/prisma/enums.js"
+import { OutageCause, OutageStatus } from "../../generated/prisma/enums.js"
 
 /*
 The outage covers the given areas plus the areas of the given reports, so a Zone Manager can
@@ -21,12 +21,35 @@ export const confirmOutageSchema = z
 
 export type ConfirmOutagePayload = z.output<typeof confirmOutageSchema>
 
-export const outagesQuerySchema = z.strictObject({
+const pageSchema = {
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(10),
   status: z.enum(OutageStatus).optional(),
+}
+
+export const outagesQuerySchema = z.strictObject({
+  ...pageSchema,
   zoneId: z.uuid().optional(),
   areaId: z.uuid().optional(),
 })
 
 export type OutagesQuery = z.output<typeof outagesQuerySchema>
+
+export const assignedOutagesQuerySchema = z.strictObject(pageSchema)
+
+export type AssignedOutagesQuery = z.output<typeof assignedOutagesQuerySchema>
+
+// The employee id of a technician in the Zone Manager's zone, from GET /employees
+export const assignOutageSchema = z.strictObject({
+  technicianId: z.uuid(),
+})
+
+export type AssignOutagePayload = z.output<typeof assignOutageSchema>
+
+// The service checks the move from the current status and whether the cause is known
+export const updateOutageStatusSchema = z.strictObject({
+  status: z.enum(["IN_PROGRESS", "RESTORED"]),
+  cause: z.enum(OutageCause).optional(),
+})
+
+export type UpdateOutageStatusPayload = z.output<typeof updateOutageStatusSchema>

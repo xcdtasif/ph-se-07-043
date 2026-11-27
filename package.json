@@ -16,6 +16,7 @@
     "db:generate": "prisma generate",
     "db:seed": "tsx src/db/seed.ts",
     "db:delete": "tsx src/db/delete.ts",
+    "db:reseed": "pnpm db:delete && pnpm db:seed",
     "fmt": "oxfmt",
     "lint": "oxlint --fix",
     "vc:env-sync": "bash scripts/vercel-env-sync.sh"

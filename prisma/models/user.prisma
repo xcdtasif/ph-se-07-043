@@ -52,8 +52,9 @@ model Employee {
   createdAt DateTime     @default(now()) @map("created_at")
   updatedAt DateTime     @updatedAt @map("updated_at")
 
-  user User  @relation(fields: [userId], references: [id])
-  zone Zone? @relation(fields: [zoneId], references: [id])
+  user            User     @relation(fields: [userId], references: [id])
+  zone            Zone?    @relation(fields: [zoneId], references: [id])
+  assignedOutages Outage[]
 
   @@unique([userId], map: "employees_user_id_active_key", where: raw("ended_at IS NULL"))
   @@unique([zoneId], map: "employees_zone_id_active_manager_key", where: raw("role = 'ZONE_MANAGER' AND ended_at IS NULL"))

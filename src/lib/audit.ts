@@ -10,8 +10,19 @@ export const AUDIT_ACTIONS = [
   "SLOT_CANCELLED",
   "SCHEDULE_DAY_CONFIRMED",
   "OUTAGE_CONFIRMED",
+  "OUTAGE_ASSIGNED",
+  "OUTAGE_STATUS_CHANGED",
+  "EMPLOYMENT_ENDED",
 ] as const
-export const AUDIT_ENTITY_TYPES = ["USER", "ZONE", "FEEDER", "AREA", "SLOT", "OUTAGE"] as const
+export const AUDIT_ENTITY_TYPES = [
+  "USER",
+  "ZONE",
+  "FEEDER",
+  "AREA",
+  "SLOT",
+  "OUTAGE",
+  "EMPLOYEE",
+] as const
 
 type AuditEntry = {
   // null when the system acted, e.g. a payment webhook

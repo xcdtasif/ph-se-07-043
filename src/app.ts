@@ -11,6 +11,7 @@ import { rateLimit } from "./middlewares/rate-limit.js"
 import { areaRouter } from "./modules/area/area.routes.js"
 import { authRouter } from "./modules/auth/auth.routes.js"
 import { customerRouter } from "./modules/customer/customer.routes.js"
+import { employeeRouter } from "./modules/employee/employee.routes.js"
 import { feederRouter } from "./modules/feeder/feeder.routes.js"
 import { outageReportRouter } from "./modules/outage-report/outage-report.routes.js"
 import { outageRouter } from "./modules/outage/outage.routes.js"
@@ -55,6 +56,9 @@ app.use("/api/v1/schedules", scheduleRouter)
 // Outage
 app.use("/api/v1/outage-reports", outageReportRouter)
 app.use("/api/v1/outages", outageRouter)
+
+// Employee
+app.use("/api/v1/employees", employeeRouter)
 
 // Admin
 app.use("/api/v1/admin/users", adminUserRouter)
