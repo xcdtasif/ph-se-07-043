@@ -4,12 +4,15 @@ import type Stripe from "stripe"
 import { env } from "../../config/env.js"
 import type { Prisma } from "../../generated/prisma/client.js"
 import { writeAuditLog } from "../../lib/audit.js"
+import { sendMail } from "../../lib/mailer.js"
 import { prisma } from "../../lib/prisma.js"
 import { stripe } from "../../lib/stripe.js"
 import { AppError } from "../../utils/app-error.js"
 import { lockLiveRow } from "../../utils/lock-live-row.js"
 import type { AuthUser } from "../auth/auth.user.js"
 import { isOpenPosting } from "../job-posting/job-posting.service.js"
+import { invoiceEmailTemplate } from "./payment.emails.js"
+import { buildInvoicePdf, invoiceFilename, toInvoiceNumber } from "./payment.invoice.js"
 import type { MyPaymentsQuery } from "./payment.schema.js"
 
 const CURRENCY = "bdt"
@@ -34,6 +37,7 @@ const paymentSelect = {
   currency: true,
   status: true,
   paidAt: true,
+  invoiceNumber: true,
   createdAt: true,
   updatedAt: true,
   application: {
@@ -183,18 +187,19 @@ const createCheckout = async (user: AuthUser, applicationId: string) => {
 }
 
 /*
-Marks the payment COMPLETED and submits the application, in one transaction with its audit log.
-Stripe retries webhooks, so a payment that's no longer PENDING is skipped
+Marks the payment COMPLETED with its invoice number and submits the application, in one transaction
+with its audit log. Stripe retries webhooks, so a payment that's no longer PENDING is skipped.
+Returns the payment's id only when this call completed it, so a replay sends no second invoice
 */
-const completePayment = async (session: Stripe.Checkout.Session) => {
-  await prisma.$transaction(async (tx) => {
+const completePayment = async (session: Stripe.Checkout.Session) =>
+  prisma.$transaction(async (tx) => {
     const payment = await tx.payment.findUnique({
       where: { stripeSessionId: session.id },
       select: { id: true, applicationId: true },
     })
 
     if (!payment) {
-      return
+      return null
     }
 
     const paymentIntentId =
@@ -202,14 +207,15 @@ const completePayment = async (session: Stripe.Checkout.Session) => {
         ? session.payment_intent
         : (session.payment_intent?.id ?? null)
     const paidAt = new Date()
+    const invoiceNumber = toInvoiceNumber(payment.id, paidAt)
 
     const { count } = await tx.payment.updateMany({
       where: { id: payment.id, status: "PENDING" },
-      data: { status: "COMPLETED", paymentIntentId, paidAt },
+      data: { status: "COMPLETED", paymentIntentId, paidAt, invoiceNumber },
     })
 
     if (count === 0) {
-      return
+      return null
     }
 
     await writeAuditLog(tx, {
@@ -218,7 +224,7 @@ const completePayment = async (session: Stripe.Checkout.Session) => {
       entityType: "PAYMENT",
       entityId: payment.id,
       before: { status: "PENDING" },
-      after: { status: "COMPLETED", paidAt: paidAt.toISOString() },
+      after: { status: "COMPLETED", paidAt: paidAt.toISOString(), invoiceNumber },
     })
 
     const { count: submitted } = await tx.application.updateMany({
@@ -232,7 +238,79 @@ const completePayment = async (session: Stripe.Checkout.Session) => {
         `Payment ${payment.id} was paid but application ${payment.applicationId} was already paid`,
       )
     }
+
+    return payment.id
   })
+
+// What the invoice shows, for a COMPLETED payment
+const invoiceSelect = {
+  id: true,
+  status: true,
+  amount: true,
+  paidAt: true,
+  invoiceNumber: true,
+  paymentIntentId: true,
+  application: {
+    select: {
+      userId: true,
+      phone: true,
+      user: { select: { name: true, email: true } },
+      jobPosting: { select: { title: true, role: true, zone: { select: { name: true } } } },
+    },
+  },
+} as const
+
+type InvoicePayment = Prisma.PaymentGetPayload<{ select: typeof invoiceSelect }>
+
+// The invoice's fields, which a COMPLETED payment always has
+const toInvoice = (payment: InvoicePayment) => {
+  const { invoiceNumber, paidAt } = payment
+
+  if (payment.status !== "COMPLETED" || !invoiceNumber || !paidAt) {
+    return null
+  }
+
+  return { ...payment, invoiceNumber, paidAt }
+}
+
+/*
+Emails the payer their invoice once the payment is committed. A notification: a failure is logged,
+and the invoice stays downloadable from GET /payments/:id/invoice
+*/
+const sendInvoiceEmail = async (paymentId: string) => {
+  try {
+    const invoice = toInvoice(
+      await prisma.payment.findUniqueOrThrow({ where: { id: paymentId }, select: invoiceSelect }),
+    )
+
+    if (!invoice) {
+      return
+    }
+
+    const { user, jobPosting } = invoice.application
+    const pdf = await buildInvoicePdf(invoice)
+
+    await sendMail({
+      to: user.email,
+      subject: `Your GridLine invoice ${invoice.invoiceNumber}`,
+      html: invoiceEmailTemplate({
+        name: user.name,
+        jobTitle: jobPosting.title,
+        amount: invoice.amount,
+        paidAt: invoice.paidAt,
+        invoiceNumber: invoice.invoiceNumber,
+      }),
+      attachments: [
+        {
+          filename: invoiceFilename(invoice.invoiceNumber),
+          content: pdf,
+          contentType: "application/pdf",
+        },
+      ],
+    })
+  } catch (err) {
+    console.error(`Invoice email for payment ${paymentId} failed`, err)
+  }
 }
 
 // An expired session leaves the application waiting for payment, so the user can pay again
@@ -249,7 +327,12 @@ const handleWebhook = async (rawBody: Buffer, signature: string) => {
 
   if (event.type === "checkout.session.completed") {
     if (event.data.object.payment_status === "paid") {
-      await completePayment(event.data.object)
+      const paymentId = await completePayment(event.data.object)
+
+      // Awaited, since a serverless function may be frozen once the webhook is answered
+      if (paymentId) {
+        await sendInvoiceEmail(paymentId)
+      }
     }
   } else if (event.type === "checkout.session.expired") {
     await failPayment(event.data.object)
@@ -279,4 +362,33 @@ const getMyPayments = async (user: AuthUser, query: MyPaymentsQuery) => {
   return { payments, meta: { page, limit, total } }
 }
 
-export const paymentService = { createCheckout, handleWebhook, getMyPayments }
+// The payer's invoice as a PDF; an admin can download anyone's
+const getInvoice = async (user: AuthUser, paymentId: string) => {
+  const payment = await prisma.payment.findUnique({
+    where: { id: paymentId },
+    select: invoiceSelect,
+  })
+
+  if (!payment) {
+    throw new AppError(httpStatus.NOT_FOUND, "Payment not found")
+  }
+
+  if (payment.application.userId !== user.id && user.employee?.role !== "ADMIN") {
+    throw new AppError(httpStatus.FORBIDDEN, "This payment isn't yours")
+  }
+
+  const invoice = toInvoice(payment)
+
+  if (!invoice) {
+    throw new AppError(httpStatus.CONFLICT, "Only a completed payment has an invoice")
+  }
+
+  return { filename: invoiceFilename(invoice.invoiceNumber), pdf: await buildInvoicePdf(invoice) }
+}
+
+export const paymentService = {
+  createCheckout,
+  handleWebhook,
+  getMyPayments,
+  getInvoice,
+}

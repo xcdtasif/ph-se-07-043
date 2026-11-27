@@ -2,6 +2,7 @@ import express, { Router } from "express"
 
 import { authenticate } from "../../middlewares/authenticate.js"
 import { validate } from "../../middlewares/validate.js"
+import { idParamsSchema } from "../../utils/id-params.js"
 import { paymentController } from "./payment.controller.js"
 import { myPaymentsQuerySchema } from "./payment.schema.js"
 
@@ -13,6 +14,14 @@ router.get(
   authenticate,
   validate(myPaymentsQuerySchema, "query"),
   paymentController.getMyPayments,
+)
+
+// Download Invoice
+router.get(
+  "/:id/invoice",
+  authenticate,
+  validate(idParamsSchema, "params"),
+  paymentController.getInvoice,
 )
 
 export const paymentRouter = router

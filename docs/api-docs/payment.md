@@ -11,11 +11,12 @@ checkout stays open for 35 minutes.
 
 `:name` is a path param, `?…` means query params and `{…}` means a request body. Details are in each section.
 
-| Name                                        | Endpoint                            | Access                       |
-| ------------------------------------------- | ----------------------------------- | ---------------------------- |
-| [Pay Application Fee](#pay-application-fee) | `POST /api/v1/applications/:id/pay` | Authenticated, its applicant |
-| [Get My Payments](#get-my-payments)         | `GET /api/v1/payments/me?…`         | Authenticated                |
-| [Stripe Webhook](#stripe-webhook)           | `POST /api/v1/stripe/webhook`       | Stripe (signed)              |
+| Name                                        | Endpoint                            | Access                        |
+| ------------------------------------------- | ----------------------------------- | ----------------------------- |
+| [Pay Application Fee](#pay-application-fee) | `POST /api/v1/applications/:id/pay` | Authenticated, its applicant  |
+| [Get My Payments](#get-my-payments)         | `GET /api/v1/payments/me?…`         | Authenticated                 |
+| [Download Invoice](#download-invoice)       | `GET /api/v1/payments/:id/invoice`  | Authenticated, payer or Admin |
+| [Stripe Webhook](#stripe-webhook)           | `POST /api/v1/stripe/webhook`       | Stripe (signed)               |
 
 The endpoints for users can also answer:
 
@@ -29,8 +30,8 @@ Stripe's own failures answer `429 Payment provider is busy, try again`,
 
 ## Payment Object
 
-`amount` is in whole taka: the posting's fee when the checkout opened. `paidAt` is set once it's
-`COMPLETED`. `application` shows where the application stands.
+`amount` is in whole taka: the posting's fee when the checkout opened. `paidAt` and
+`invoiceNumber` are set once it's `COMPLETED`. `application` shows where the application stands.
 
 ```json
 {
@@ -39,6 +40,7 @@ Stripe's own failures answer `429 Payment provider is busy, try again`,
   "currency": "bdt",
   "status": "COMPLETED",
   "paidAt": "2026-11-27T13:34:40.909Z",
+  "invoiceNumber": "GL-20261127-AF1B0647",
   "createdAt": "2026-11-27T13:28:16.817Z",
   "updatedAt": "2026-11-27T13:34:40.911Z",
   "application": {
@@ -117,15 +119,40 @@ URL.
 
 ---
 
+## Download Invoice
+
+`GET /api/v1/payments/:id/invoice` · Authenticated, payer or Admin
+
+Returns the invoice of a `COMPLETED` payment as a PDF (`Content-Type: application/pdf`), saved as
+`invoice-<invoiceNumber>.pdf`. It's the same invoice the webhook emails to the payer, built afresh
+on each request, so a lost email doesn't lose the invoice. Errors answer in JSON as usual.
+
+**Example**
+
+`GET /api/v1/payments/af1b0647-d118-43e3-9bec-68edc4a75021/invoice`
+
+**Responses**
+
+| Status | When                              | Message                                   |
+| ------ | --------------------------------- | ----------------------------------------- |
+| 200    | Success                           | The PDF, no JSON body                     |
+| 400    | `id` isn't a UUID                 | `Validation of params failed`             |
+| 403    | Someone else's payment, not Admin | `This payment isn't yours`                |
+| 404    | No payment with this id           | `Payment not found`                       |
+| 409    | `PENDING` or `FAILED`             | `Only a completed payment has an invoice` |
+
+---
+
 ## Stripe Webhook
 
 `POST /api/v1/stripe/webhook` · Stripe (signed)
 
 Called by Stripe, not by clients: the `Stripe-Signature` header is checked against the raw body
-with `STRIPE_WEBHOOK_SECRET`. `checkout.session.completed` (paid) marks the payment `COMPLETED` and
-submits the application in one transaction, with an audit log entry; `checkout.session.expired`
-marks it `FAILED`. Stripe retries deliveries, so an event for a payment that's no longer
-`PENDING` changes nothing. Locally, `pn stripe:listen` forwards the events here.
+with `STRIPE_WEBHOOK_SECRET`. `checkout.session.completed` (paid) marks the payment `COMPLETED` with
+its `invoiceNumber` and submits the application in one transaction, with an audit log entry, then
+emails the payer the [invoice](#download-invoice) PDF; a failed email is only logged.
+`checkout.session.expired` marks it `FAILED`. Stripe retries deliveries, so an event for a payment
+that's no longer `PENDING` changes nothing and sends no second email. Locally, `pn stripe:listen` forwards the events here.
 
 **Responses**
 

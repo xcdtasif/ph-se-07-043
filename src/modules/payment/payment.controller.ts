@@ -48,4 +48,19 @@ const getMyPayments = async (req: Request, res: Response) => {
   })
 }
 
-export const paymentController = { createCheckout, handleWebhook, getMyPayments }
+// The PDF itself, not the JSON envelope; attachment makes browsers save it under its number
+const getInvoice = async (req: Request<IdParams>, res: Response) => {
+  const { filename, pdf } = await paymentService.getInvoice(requestUser(req), req.params.id)
+
+  res
+    .status(httpStatus.OK)
+    .set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Length": String(pdf.length),
+      "Cache-Control": "private, no-store",
+    })
+    .send(pdf)
+}
+
+export const paymentController = { createCheckout, handleWebhook, getMyPayments, getInvoice }

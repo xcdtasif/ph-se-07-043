@@ -82,12 +82,15 @@ model Payment {
   stripeSessionId String        @map("stripe_session_id")
   paymentIntentId String?       @map("payment_intent_id")
   paidAt          DateTime?     @map("paid_at")
+  // Set with COMPLETED, e.g. GL-20261127-3F2A9C1D
+  invoiceNumber   String?       @map("invoice_number")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
   application Application @relation(fields: [applicationId], references: [id])
 
   @@unique([stripeSessionId])
+  @@unique([invoiceNumber])
   @@index([applicationId, status])
   @@map("payments")
 }
