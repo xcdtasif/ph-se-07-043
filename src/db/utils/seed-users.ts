@@ -10,10 +10,11 @@ export type SeedUser = {
   name: string
   email: string
   isBanned?: boolean
+  customer?: { areaName: string; meterNumber?: string }
   employee?: { role: EmployeeRole; zoneCode: string }
 }
 
-// Creates the users whose email isn't taken yet, with their employee row if they have one
+// Creates the users whose email isn't taken yet, with their customer and employee rows if they have them
 export const seedUsers = async (users: SeedUser[], singular: string, plural: string) => {
   const existing = await prisma.user.findMany({
     where: { email: { in: users.map((user) => user.email) } },
@@ -27,14 +28,25 @@ export const seedUsers = async (users: SeedUser[], singular: string, plural: str
     return
   }
 
-  const zones = await prisma.zone.findMany({
-    where: { deletedAt: null },
-    select: { id: true, code: true },
-  })
+  const [zones, areas] = await Promise.all([
+    prisma.zone.findMany({ where: { deletedAt: null }, select: { id: true, code: true } }),
+    // Seed area names are unique across feeders, so the name is enough to find one
+    prisma.area.findMany({ where: { deletedAt: null }, select: { id: true, name: true } }),
+  ])
   const zoneIds = new Map(zones.map((zone) => [zone.code, zone.id]))
+  const areaIds = new Map(areas.map((area) => [area.name, area.id]))
   const password = await authUtils.hashPassword(SEED_PASSWORD)
 
-  for (const { employee, ...user } of missing) {
+  for (const { customer, employee, ...user } of missing) {
+    let customerRow
+    if (customer) {
+      const areaId = areaIds.get(customer.areaName)
+      if (!areaId) {
+        throw new Error(`Area ${customer.areaName} not found; seed the grid first`)
+      }
+      customerRow = { create: { areaId, meterNumber: customer.meterNumber ?? null } }
+    }
+
     let employees
     if (employee) {
       const zoneId = zoneIds.get(employee.zoneCode)
@@ -44,7 +56,14 @@ export const seedUsers = async (users: SeedUser[], singular: string, plural: str
       employees = { create: { role: employee.role, zoneId } }
     }
 
-    await prisma.user.create({ data: { ...user, password, ...(employees && { employees }) } })
+    await prisma.user.create({
+      data: {
+        ...user,
+        password,
+        ...(customerRow && { customer: customerRow }),
+        ...(employees && { employees }),
+      },
+    })
   }
 
   logCount(missing.length, singular, plural, "seeded")

@@ -40,7 +40,8 @@ model Area {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
-  feeder Feeder @relation(fields: [feederId], references: [id])
+  feeder    Feeder     @relation(fields: [feederId], references: [id])
+  customers Customer[]
 
   @@unique([feederId, name], map: "areas_feeder_id_name_active_key", where: raw("deleted_at IS NULL"))
   @@index([feederId])

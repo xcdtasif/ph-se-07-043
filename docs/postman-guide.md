@@ -51,12 +51,12 @@ only a token from the frontend's widget passes.
 
 `pnpm db:seed` creates these. All but the admin use the password `1a2s3d4f`.
 
-| Account                     | Role                                |
-| --------------------------- | ----------------------------------- |
-| `customer01@example.com`    | Customer (`customer05` is banned)   |
-| `technician01@example.com`  | Technician, Mirpur zone             |
-| `zonemanager01@example.com` | Zone Manager, Mirpur zone           |
-| `ADMIN_EMAIL`               | Admin, password in `ADMIN_PASSWORD` |
+| Account                     | Role                                                                                              |
+| --------------------------- | ------------------------------------------------------------------------------------------------- |
+| `customer01@example.com`    | Customer in Mirpur 10, Block C (`customer05` is banned, `customer08` has no customer profile yet) |
+| `technician01@example.com`  | Technician, Mirpur zone                                                                           |
+| `zonemanager01@example.com` | Zone Manager, Mirpur zone                                                                         |
+| `ADMIN_EMAIL`               | Admin, password in `ADMIN_PASSWORD`                                                               |
 
 Edit the email and password in the **Log In User** body to switch accounts.
 

@@ -9,6 +9,7 @@ import { errorHandler } from "./middlewares/error-handler.js"
 import { notFound } from "./middlewares/not-found.js"
 import { rateLimit } from "./middlewares/rate-limit.js"
 import { authRouter } from "./modules/auth/auth.routes.js"
+import { customerRouter } from "./modules/customer/customer.routes.js"
 import { userRouter } from "./modules/user/user.routes.js"
 import "./types/express.js"
 import { sendResponse } from "./utils/send-response.js"
@@ -32,6 +33,9 @@ app.use("/api/v1/auth", authRouter)
 
 // User
 app.use("/api/v1/users", userRouter)
+
+// Customer
+app.use("/api/v1/customers", customerRouter)
 
 app.use(notFound)
 app.use(errorHandler)

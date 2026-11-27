@@ -3,9 +3,11 @@ import httpStatus from "http-status"
 import { prisma } from "../../lib/prisma.js"
 import { AppError } from "../../utils/app-error.js"
 
+export const customerSelect = { id: true, areaId: true, meterNumber: true } as const
+
 /*
-What every authenticated request and auth response knows about the user: the login and the
-active employee profile (Customer joins this in step 8). Password and googleId never leave here
+What every authenticated request and auth response knows about the user: the login, the customer
+profile and the active employee profile. Password and googleId never leave here
 */
 export const authUserSelect = {
   id: true,
@@ -13,6 +15,7 @@ export const authUserSelect = {
   email: true,
   isBanned: true,
   tokenVersion: true,
+  customer: { select: customerSelect },
   employees: {
     where: { endedAt: null },
     select: { id: true, role: true, zoneId: true },

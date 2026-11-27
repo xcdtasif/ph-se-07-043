@@ -79,19 +79,25 @@ Over the limit returns `429 Too many requests, try again in N seconds` with a `R
 ## User Object
 
 Returned by every auth endpoint that responds with a user. The password is never included.
-`employee` is the user's active job at the company, or `null` for a user who isn't an employee.
-`zoneId` is `null` for an admin, who covers every zone.
+
+- `customer` is the user's electricity connection, or `null` until they create one with
+  [Create My Customer Profile](customer.md#create-my-customer-profile). `meterNumber` may be `null`.
+- `employee` is the user's active job at the company, or `null` for a user who isn't an employee.
+  `zoneId` is `null` for an admin, who covers every zone.
+
+A user can have both: an employee who also gets electricity from GridLine.
 
 ```json
 {
-  "id": "9600f9bc-8c3e-43f5-8a46-782596d82cd7",
-  "name": "Technician 01",
-  "email": "technician01@example.com",
-  "employee": {
-    "id": "6b3c1eb3-3024-4d66-9f05-3a6422631331",
-    "role": "TECHNICIAN",
-    "zoneId": "5ab7b985-3aab-45a4-9eef-e649e0041ec1"
-  }
+  "id": "25568d41-6919-4b36-882e-e0b180c8cd49",
+  "name": "Customer 01",
+  "email": "customer01@example.com",
+  "customer": {
+    "id": "abeeaaa7-07cf-4938-8b8a-4aa60f998369",
+    "areaId": "e12c3955-a007-460d-8934-7b623ed1a1f7",
+    "meterNumber": "100000000001"
+  },
+  "employee": null
 }
 ```
 

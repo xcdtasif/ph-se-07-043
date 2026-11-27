@@ -9,11 +9,31 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  customer  Customer?
   employees Employee[]
 
   @@unique([email])
   @@unique([googleId])
   @@map("users")
+}
+
+// A user's electricity connection. Optional: employees and new Google users have none until they
+// create one, and customer actions need it
+model Customer {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  areaId      String   @map("area_id")
+  meterNumber String?  @map("meter_number")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+  area Area @relation(fields: [areaId], references: [id])
+
+  @@unique([userId])
+  @@unique([meterNumber])
+  @@index([areaId])
+  @@map("customers")
 }
 
 // A user's job with the company. Ending employment sets endedAt; the row stays as history.
