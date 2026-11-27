@@ -20,12 +20,6 @@ export const userListQuerySchema = z.strictObject({
 
 export type UserListQuery = z.output<typeof userListQuerySchema>
 
-export const userIdParamsSchema = z.strictObject({
-  id: z.uuid(),
-})
-
-export type UserIdParams = z.output<typeof userIdParamsSchema>
-
 export const banUserSchema = z.strictObject({
   isBanned: z.boolean(),
 })

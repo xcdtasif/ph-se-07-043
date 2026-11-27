@@ -1,17 +1,15 @@
 import httpStatus from "http-status"
 
+import type { Prisma } from "../../generated/prisma/client.js"
 import { prisma } from "../../lib/prisma.js"
 import { AppError } from "../../utils/app-error.js"
+import { lockLiveRow } from "../../utils/lock-live-row.js"
 import { customerSelect } from "../auth/auth.user.js"
 import type { CreateCustomerPayload, UpdateCustomerPayload } from "./customer.schema.js"
 
-const assertAreaExists = async (areaId: string) => {
-  const area = await prisma.area.findFirst({
-    where: { id: areaId, deletedAt: null },
-    select: { id: true },
-  })
-
-  if (!area) {
+// Holds the area until the profile is saved, so the area can't be deleted meanwhile
+const lockArea = async (tx: Prisma.TransactionClient, areaId: string) => {
+  if (!(await lockLiveRow(tx, "areas", areaId, "SHARE"))) {
     throw new AppError(httpStatus.NOT_FOUND, "Area not found", [
       { path: "areaId", message: "Area not found" },
     ])
@@ -39,14 +37,17 @@ const createMe = async (userId: string, { areaId, meterNumber }: CreateCustomerP
     throw new AppError(httpStatus.CONFLICT, "You already have a customer profile")
   }
 
-  await assertAreaExists(areaId)
   if (meterNumber) {
     await assertMeterFree(meterNumber, userId)
   }
 
-  return prisma.customer.create({
-    data: { userId, areaId, meterNumber: meterNumber ?? null },
-    select: customerSelect,
+  return prisma.$transaction(async (tx) => {
+    await lockArea(tx, areaId)
+
+    return tx.customer.create({
+      data: { userId, areaId, meterNumber: meterNumber ?? null },
+      select: customerSelect,
+    })
   })
 }
 
@@ -57,17 +58,20 @@ const updateMe = async (userId: string, { areaId, meterNumber }: UpdateCustomerP
     throw new AppError(httpStatus.NOT_FOUND, "Create your customer profile first")
   }
 
-  if (areaId) {
-    await assertAreaExists(areaId)
-  }
   if (meterNumber) {
     await assertMeterFree(meterNumber, userId)
   }
 
-  return prisma.customer.update({
-    where: { userId },
-    data: { ...(areaId && { areaId }), ...(meterNumber !== undefined && { meterNumber }) },
-    select: customerSelect,
+  return prisma.$transaction(async (tx) => {
+    if (areaId) {
+      await lockArea(tx, areaId)
+    }
+
+    return tx.customer.update({
+      where: { userId },
+      data: { ...(areaId && { areaId }), ...(meterNumber !== undefined && { meterNumber }) },
+      select: customerSelect,
+    })
   })
 }
 

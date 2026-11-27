@@ -1,8 +1,14 @@
 import type { Prisma } from "../generated/prisma/client.js"
 
 // Each step that audits a new action adds it here; GET /admin/audit-logs filters by these
-export const AUDIT_ACTIONS = ["USER_BANNED", "USER_UNBANNED"] as const
-export const AUDIT_ENTITY_TYPES = ["USER"] as const
+export const AUDIT_ACTIONS = [
+  "USER_BANNED",
+  "USER_UNBANNED",
+  "ZONE_DELETED",
+  "FEEDER_DELETED",
+  "AREA_DELETED",
+] as const
+export const AUDIT_ENTITY_TYPES = ["USER", "ZONE", "FEEDER", "AREA"] as const
 
 type AuditEntry = {
   // null when the system acted, e.g. a payment webhook

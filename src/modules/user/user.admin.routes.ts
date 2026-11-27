@@ -3,8 +3,9 @@ import { Router } from "express"
 import { authenticate } from "../../middlewares/authenticate.js"
 import { authorize } from "../../middlewares/authorize.js"
 import { validate } from "../../middlewares/validate.js"
+import { idParamsSchema } from "../../utils/id-params.js"
 import { adminUserController } from "./user.admin.controller.js"
-import { banUserSchema, userIdParamsSchema, userListQuerySchema } from "./user.admin.schema.js"
+import { banUserSchema, userListQuerySchema } from "./user.admin.schema.js"
 
 const router = Router()
 
@@ -16,7 +17,7 @@ router.get("/", validate(userListQuerySchema, "query"), adminUserController.getA
 // Ban Or Unban User
 router.patch(
   "/:id/ban",
-  validate(userIdParamsSchema, "params"),
+  validate(idParamsSchema, "params"),
   validate(banUserSchema, "body"),
   adminUserController.banUser,
 )

@@ -23,10 +23,10 @@ Creates the signed-in user's customer profile and returns it.
 
 **Body**
 
-| Field         | Type   | Rules                                                     |
-| ------------- | ------ | --------------------------------------------------------- |
-| `areaId`      | string | Required; UUID of an area that isn't deleted              |
-| `meterNumber` | string | Optional; exactly 12 digits, not used by another customer |
+| Field         | Type   | Rules                                                                 |
+| ------------- | ------ | --------------------------------------------------------------------- |
+| `areaId`      | string | Required; UUID of an area from [Get All Areas](grid.md#get-all-areas) |
+| `meterNumber` | string | Optional; exactly 12 digits, not used by another customer             |
 
 **Example**
 

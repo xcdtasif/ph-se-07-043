@@ -1,9 +1,10 @@
 import type { Request, Response } from "express"
 import httpStatus from "http-status"
 
+import type { IdParams } from "../../utils/id-params.js"
 import { requestUser } from "../../utils/request-user.js"
 import { sendResponse } from "../../utils/send-response.js"
-import type { BanUserPayload, UserIdParams, UserListQuery } from "./user.admin.schema.js"
+import type { BanUserPayload, UserListQuery } from "./user.admin.schema.js"
 import { adminUserService } from "./user.admin.service.js"
 
 const getAllUsers = async (req: Request, res: Response) => {
@@ -18,7 +19,7 @@ const getAllUsers = async (req: Request, res: Response) => {
   })
 }
 
-const banUser = async (req: Request<UserIdParams, {}, BanUserPayload>, res: Response) => {
+const banUser = async (req: Request<IdParams, {}, BanUserPayload>, res: Response) => {
   const user = await adminUserService.banUser(requestUser(req).id, req.params.id, req.body)
 
   sendResponse(res, {
