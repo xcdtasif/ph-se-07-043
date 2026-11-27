@@ -2,18 +2,29 @@
 
 An **outage report** is a customer saying their power is out when no load shedding is scheduled.
 The Zone Manager of the area's zone looks at the zone's pending reports and either dismisses one
-(for example, it was scheduled load shedding) or confirms an outage, which links the pending reports
-in its areas.
+(for example, it was scheduled load shedding) or confirms an **outage** in some of the zone's
+areas, which links the pending reports in those areas. A Zone Manager can also confirm an outage
+nobody reported.
 
 A report is made for the customer's current area, taken from their
 [customer profile](customer.md). Moving to another area later doesn't move old reports. A customer
-can have one pending report per area at a time.
+can have one pending report per area at a time. If the area is already in an active outage, a new
+report joins it at once (`LINKED`), once per customer per outage.
 
-| Status      | Meaning                                  |
-| ----------- | ---------------------------------------- |
-| `PENDING`   | Waiting for the Zone Manager             |
-| `LINKED`    | Part of a confirmed outage (coming soon) |
-| `DISMISSED` | Not an outage; `dismissReason` says why  |
+| Report status | Meaning                                 |
+| ------------- | --------------------------------------- |
+| `PENDING`     | Waiting for the Zone Manager            |
+| `LINKED`      | Part of the outage `outageId`           |
+| `DISMISSED`   | Not an outage; `dismissReason` says why |
+
+An outage is **active** until it's `RESTORED`, and an area is in at most one active outage.
+
+| Outage status | Meaning                                       |
+| ------------- | --------------------------------------------- |
+| `CONFIRMED`   | The Zone Manager confirmed it                 |
+| `ASSIGNED`    | A technician is assigned (coming soon)        |
+| `IN_PROGRESS` | The technician is working on it (coming soon) |
+| `RESTORED`    | Power is back (coming soon)                   |
 
 ## Endpoints
 
@@ -25,8 +36,11 @@ can have one pending report per area at a time.
 | [Get My Reports](#get-my-reports)     | `GET /api/v1/outage-reports/me?…`          | Customer     |
 | [Get Zone Reports](#get-zone-reports) | `GET /api/v1/outage-reports?…`             | Zone Manager |
 | [Dismiss Report](#dismiss-report)     | `PATCH /api/v1/outage-reports/:id/dismiss` | Zone Manager |
+| [Confirm Outage](#confirm-outage)     | `POST /api/v1/outages`                     | Zone Manager |
+| [Get Outages](#get-outages)           | `GET /api/v1/outages?…`                    | Public       |
+| [Get Outage](#get-outage)             | `GET /api/v1/outages/:id`                  | Public       |
 
-Every endpoint can also answer:
+Every endpoint that needs a login can also answer:
 
 | Status | When                                      | Message                                |
 | ------ | ----------------------------------------- | -------------------------------------- |
@@ -37,7 +51,8 @@ Every endpoint can also answer:
 
 ## Report Object
 
-What a customer sees. Times are UTC.
+What a customer sees. Times are UTC. `outageId` is set when the report is `LINKED`; the outage's
+status page is `CLIENT_URL/outages/:outageId`.
 
 ```json
 {
@@ -45,6 +60,7 @@ What a customer sees. Times are UTC.
   "status": "DISMISSED",
   "description": "Lights went out",
   "dismissReason": "That was scheduled load shedding on MIR-F01",
+  "outageId": null,
   "createdAt": "2026-11-24T09:06:22.644Z",
   "updatedAt": "2026-11-24T10:06:22.644Z",
   "area": {
@@ -62,6 +78,7 @@ A Zone Manager also gets the area's feeder and who reported it:
   "status": "PENDING",
   "description": "No power since the evening, the whole lane is dark",
   "dismissReason": null,
+  "outageId": null,
   "createdAt": "2026-11-27T08:06:22.482Z",
   "updatedAt": "2026-11-27T09:06:23.171Z",
   "area": {
@@ -80,13 +97,42 @@ A Zone Manager also gets the area's feeder and who reported it:
 }
 ```
 
+## Outage Object
+
+What anyone sees on the status page: no staff or customer details. `note` is the Zone Manager's
+message for the public. `areas` are sorted by name and `reportCount` counts the linked reports.
+
+```json
+{
+  "id": "0ce75c9b-0822-4817-8ce6-4d20f4a021ab",
+  "status": "CONFIRMED",
+  "note": "Fault near Road 27, crews are on the way",
+  "confirmedAt": "2026-11-27T05:27:38.519Z",
+  "updatedAt": "2026-11-27T05:27:38.519Z",
+  "zone": { "id": "53f1db93-cc91-4332-860d-bb9c6cb09df0", "name": "Dhanmondi" },
+  "areas": [
+    {
+      "id": "890035ae-794e-44a2-aef5-68dc571f820c",
+      "name": "Dhanmondi Road 27",
+      "feeder": {
+        "id": "4b4dbcec-7c79-4682-ab38-ca8a9291feb0",
+        "name": "Dhanmondi West",
+        "code": "DHN-F01"
+      }
+    }
+  ],
+  "reportCount": 1
+}
+```
+
 ---
 
 ## Report Outage
 
 `POST /api/v1/outage-reports` · Customer
 
-Reports an outage in the customer's area and returns the [report](#report-object) as `PENDING`.
+Reports an outage in the customer's area and returns the [report](#report-object). It's `PENDING`,
+or `LINKED` with `outageId` set when the area is already in an active outage.
 
 **Body**
 
@@ -104,11 +150,13 @@ Reports an outage in the customer's area and returns the [report](#report-object
 
 **Responses**
 
-| Status | When                                  | Message                                           |
-| ------ | ------------------------------------- | ------------------------------------------------- |
-| 201    | Success                               | `Outage reported successfully`                    |
-| 400    | Validation failed                     | `Validation of body failed`                       |
-| 409    | A pending report for this area exists | `You already have a pending report for this area` |
+| Status | When                                  | Message                                                                   |
+| ------ | ------------------------------------- | ------------------------------------------------------------------------- |
+| 201    | Success, report pending               | `Outage reported successfully`                                            |
+| 201    | Success, joined the active outage     | `Outage reported; it's already confirmed and your report was added to it` |
+| 400    | Validation failed                     | `Validation of body failed`                                               |
+| 409    | A pending report for this area exists | `You already have a pending report for this area`                         |
+| 409    | Already reported the active outage    | `You already reported this outage`                                        |
 
 ---
 
@@ -197,3 +245,94 @@ Manager's [report](#report-object) shape. The customer sees the reason.
 | 404    | No report with this id        | `Report not found`                                          |
 | 409    | Already dismissed             | `Report is already dismissed`                               |
 | 409    | Linked to an outage           | `This report is linked to an outage and can't be dismissed` |
+
+---
+
+## Confirm Outage
+
+`POST /api/v1/outages` · Zone Manager
+
+Confirms an outage in the Zone Manager's zone and returns the [outage](#outage-object). It covers
+`areaIds` plus the areas of `reportIds`, so the Zone Manager can confirm straight from the reports
+in front of them. Every pending report in those areas is linked, not just the given ones.
+
+**Body**
+
+| Field       | Type     | Rules                                                    |
+| ----------- | -------- | -------------------------------------------------------- |
+| `areaIds`   | string[] | Optional; up to 50 area UUIDs in the zone                |
+| `reportIds` | string[] | Optional; up to 50 pending report UUIDs in the zone      |
+| `note`      | string   | Optional; 1–500 characters, trimmed. Shown to the public |
+
+At least one area or report is required.
+
+**Example**
+
+```json
+{
+  "reportIds": ["07c759cd-8083-4d13-8e68-c55fa2d98886"],
+  "areaIds": ["331dad88-f8a2-446a-96f8-54542ca697f4"],
+  "note": "Transformer fault on MIR-F01, crews are on the way"
+}
+```
+
+**Responses**
+
+`errors` lists which area or report each 403, 404 or 409 is about.
+
+| Status | When                                   | Message                                    |
+| ------ | -------------------------------------- | ------------------------------------------ |
+| 201    | Success                                | `Outage confirmed successfully`            |
+| 400    | Validation failed                      | `Validation of body failed`                |
+| 403    | An area is in another zone             | `These areas aren't in your zone`          |
+| 403    | A report is in another zone            | `Some reports aren't in your zone`         |
+| 404    | An area doesn't exist or was deleted   | `Area not found`                           |
+| 404    | A report doesn't exist                 | `Report not found`                         |
+| 409    | An area is already in an active outage | `Some areas already have an active outage` |
+| 409    | A given report isn't pending           | `Some reports are no longer pending`       |
+
+---
+
+## Get Outages
+
+`GET /api/v1/outages?…` · Public
+
+Lists [outages](#outage-object), newest first. `meta` holds `page`, `limit` and `total`. Answers
+are cached for up to 5 minutes and dropped as soon as an outage or a grid name changes.
+
+**Query**
+
+| Param    | Rules                                                | Default |
+| -------- | ---------------------------------------------------- | ------- |
+| `page`   | Integer ≥ 1                                          | `1`     |
+| `limit`  | Integer 1–50                                         | `10`    |
+| `status` | `CONFIRMED`, `ASSIGNED`, `IN_PROGRESS` or `RESTORED` | —       |
+| `zoneId` | Zone UUID                                            | —       |
+| `areaId` | Area UUID; outages that cover this area              | —       |
+
+**Example**
+
+`GET /api/v1/outages?areaId=331dad88-f8a2-446a-96f8-54542ca697f4&page=1&limit=10`
+
+**Responses**
+
+| Status | When              | Message                        |
+| ------ | ----------------- | ------------------------------ |
+| 200    | Success           | `Outages fetched successfully` |
+| 400    | Validation failed | `Validation of query failed`   |
+
+---
+
+## Get Outage
+
+`GET /api/v1/outages/:id` · Public
+
+Returns one [outage](#outage-object), for its status page. Cached like [Get Outages](#get-outages).
+
+**Responses**
+
+| Status | When                   | Message                       |
+| ------ | ---------------------- | ----------------------------- |
+| 200    | Success                | `Outage fetched successfully` |
+| 400    | Validation failed      | `Validation of params failed` |
+| 404    | No outage with this id | `Outage not found`            |

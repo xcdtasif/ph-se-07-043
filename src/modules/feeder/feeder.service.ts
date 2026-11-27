@@ -71,7 +71,7 @@ const updateFeeder = async (id: string, { name, code }: UpdateFeederPayload) => 
     data: { ...(name && { name }), ...(code && { code }) },
     select: feederSelect,
   })
-  await bumpCache("grid", "schedules")
+  await bumpCache("grid", "schedules", "outages")
 
   return updated
 }
@@ -111,7 +111,7 @@ const deleteFeeder = async (adminId: string, id: string) => {
       after: { deletedAt: feeder.deletedAt?.toISOString() ?? null },
     })
   })
-  await bumpCache("grid", "schedules")
+  await bumpCache("grid", "schedules", "outages")
 }
 
 export const feederService = { getAllFeeders, createFeeder, updateFeeder, deleteFeeder }

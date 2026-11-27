@@ -113,7 +113,8 @@ const updateArea = async (id: string, { name }: UpdateAreaPayload) => {
     data: { name },
     select: areaSelect,
   })
-  await bumpCache("grid")
+  // Outages show area names; slots don't
+  await bumpCache("grid", "outages")
 
   return updated
 }
@@ -128,6 +129,16 @@ const deleteArea = async (adminId: string, id: string) => {
 
     if (customers > 0) {
       throw new AppError(httpStatus.CONFLICT, "Customers are still registered in this area")
+    }
+
+    // Confirming an outage locks its areas FOR UPDATE too, so this can't miss one being confirmed
+    const activeOutage = await tx.outageArea.findFirst({
+      where: { areaId: id, outage: { status: { not: "RESTORED" } } },
+      select: { outageId: true },
+    })
+
+    if (activeOutage) {
+      throw new AppError(httpStatus.CONFLICT, "This area has an active outage")
     }
 
     const area = await tx.area.update({
@@ -145,7 +156,7 @@ const deleteArea = async (adminId: string, id: string) => {
       after: { deletedAt: area.deletedAt?.toISOString() ?? null },
     })
   })
-  await bumpCache("grid", "schedules")
+  await bumpCache("grid", "schedules", "outages")
 }
 
 export const areaService = { getAllAreas, createArea, updateArea, deleteArea }

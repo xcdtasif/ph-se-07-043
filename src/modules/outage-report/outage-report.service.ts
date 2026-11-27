@@ -1,10 +1,13 @@
 import httpStatus from "http-status"
 
 import { Prisma } from "../../generated/prisma/client.js"
+import { bumpCache } from "../../lib/cache.js"
 import { prisma } from "../../lib/prisma.js"
 import { AppError } from "../../utils/app-error.js"
+import { lockLiveRow } from "../../utils/lock-live-row.js"
 import { managedZoneId } from "../../utils/managed-zone.js"
 import type { AuthUser } from "../auth/auth.user.js"
+import { activeOutage } from "../outage/outage.service.js"
 import type {
   CreateReportPayload,
   DismissReportPayload,
@@ -17,6 +20,8 @@ const reportSelect = {
   status: true,
   description: true,
   dismissReason: true,
+  // The outage it's linked to; its status page is /outages/:id
+  outageId: true,
   createdAt: true,
   updatedAt: true,
   area: { select: { id: true, name: true } },
@@ -41,17 +46,56 @@ const customerProfile = (user: AuthUser) => {
 }
 
 /*
-The area is the customer's current one. One pending report per customer per area: the partial
-unique index decides, so two reports sent at once can't both get in
+The area is the customer's current one. If the area is in an active outage the report joins it
+(LINKED), once per customer per outage. Otherwise it's PENDING, one per customer per area: the
+partial unique index decides, so two reports sent at once can't both get in
 */
 const createReport = async (user: AuthUser, { description }: CreateReportPayload) => {
   const { id: customerId, areaId } = customerProfile(user)
 
   try {
-    return await prisma.outageReport.create({
-      data: { customerId, areaId, description: description ?? null },
-      select: reportSelect,
+    const report = await prisma.$transaction(async (tx) => {
+      // Confirming locks the area FOR UPDATE, so this waits for it and then sees the outage
+      if (!(await lockLiveRow(tx, "areas", areaId, "SHARE"))) {
+        throw new AppError(httpStatus.CONFLICT, "Your area no longer exists")
+      }
+
+      const active = await tx.outageArea.findFirst({
+        where: { areaId, outage: activeOutage },
+        select: { outageId: true },
+      })
+
+      if (active) {
+        // The customer's reports take turns, so two sent at once can't both join the outage
+        await tx.$queryRaw`SELECT id FROM customers WHERE id = ${customerId} FOR UPDATE`
+
+        const joined = await tx.outageReport.findFirst({
+          where: { customerId, outageId: active.outageId },
+          select: { id: true },
+        })
+
+        if (joined) {
+          throw new AppError(httpStatus.CONFLICT, "You already reported this outage")
+        }
+      }
+
+      return tx.outageReport.create({
+        data: {
+          customerId,
+          areaId,
+          description: description ?? null,
+          ...(active && { status: "LINKED", outageId: active.outageId }),
+        },
+        select: reportSelect,
+      })
     })
+
+    // The outage's report count changed
+    if (report.outageId) {
+      await bumpCache("outages")
+    }
+
+    return report
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       throw new AppError(httpStatus.CONFLICT, "You already have a pending report for this area")

@@ -14,6 +14,7 @@ model User {
   auditLogs        AuditLog[]
   createdSlots     LoadSheddingSlot[]
   dismissedReports OutageReport[]
+  confirmedOutages Outage[]
 
   @@unique([email])
   @@unique([googleId])

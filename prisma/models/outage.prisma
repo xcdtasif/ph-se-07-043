@@ -1,6 +1,6 @@
-// A customer saying their power is out. A Zone Manager dismisses it or (from step 13) links it to
-// a confirmed outage. The area is copied from the customer's profile when the report is made, so
-// moving later doesn't move old reports
+// A customer saying their power is out. A Zone Manager dismisses it or links it to a confirmed
+// outage; a report from an area already in an active outage is linked at once. The area is copied
+// from the customer's profile when the report is made, so moving later doesn't move old reports
 model OutageReport {
   id            String             @id @default(uuid())
   customerId    String             @map("customer_id")
@@ -9,16 +9,19 @@ model OutageReport {
   status        OutageReportStatus @default(PENDING)
   dismissReason String?            @map("dismiss_reason")
   dismissedById String?            @map("dismissed_by_id")
+  outageId      String?            @map("outage_id")
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
 
   customer    Customer @relation(fields: [customerId], references: [id])
   area        Area     @relation(fields: [areaId], references: [id])
   dismissedBy User?    @relation(fields: [dismissedById], references: [id])
+  outage      Outage?  @relation(fields: [outageId], references: [id])
 
   @@unique([customerId, areaId], map: "outage_reports_customer_id_area_id_pending_key", where: raw("status = 'PENDING'"))
   @@index([areaId, status])
   @@index([customerId])
+  @@index([outageId])
   @@map("outage_reports")
 }
 
@@ -26,4 +29,44 @@ enum OutageReportStatus {
   PENDING
   LINKED
   DISMISSED
+}
+
+// An unplanned power cut a Zone Manager confirmed in some areas of their zone. Active until
+// RESTORED; an area is in at most one active outage, which confirming checks under the area locks
+model Outage {
+  id            String       @id @default(uuid())
+  zoneId        String       @map("zone_id")
+  status        OutageStatus @default(CONFIRMED)
+  // Shown on the public status page
+  note          String?
+  confirmedById String       @map("confirmed_by_id")
+  confirmedAt   DateTime     @default(now()) @map("confirmed_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  zone        Zone           @relation(fields: [zoneId], references: [id])
+  confirmedBy User           @relation(fields: [confirmedById], references: [id])
+  areas       OutageArea[]
+  reports     OutageReport[]
+
+  @@index([zoneId, status])
+  @@map("outages")
+}
+
+model OutageArea {
+  outageId String @map("outage_id")
+  areaId   String @map("area_id")
+
+  outage Outage @relation(fields: [outageId], references: [id])
+  area   Area   @relation(fields: [areaId], references: [id])
+
+  @@id([outageId, areaId])
+  @@index([areaId])
+  @@map("outage_areas")
+}
+
+enum OutageStatus {
+  CONFIRMED
+  ASSIGNED
+  IN_PROGRESS
+  RESTORED
 }

@@ -406,3 +406,4 @@ Soft deletes an area. Returns no `data`.
 | 400    | `id` isn't a UUID                 | `Validation of params failed`                 |
 | 404    | No area with this id, or deleted  | `Area not found`                              |
 | 409    | Customers have this as their area | `Customers are still registered in this area` |
+| 409    | The area is in an active outage   | `This area has an active outage`              |

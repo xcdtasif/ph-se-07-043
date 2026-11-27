@@ -13,11 +13,15 @@ import type {
 import { outageReportService } from "./outage-report.service.js"
 
 const createReport = async (req: Request<{}, {}, CreateReportPayload>, res: Response) => {
+  const report = await outageReportService.createReport(requestUser(req), req.body)
+
   sendResponse(res, {
     success: true,
     statusCode: httpStatus.CREATED,
-    message: "Outage reported successfully",
-    data: await outageReportService.createReport(requestUser(req), req.body),
+    message: report.outageId
+      ? "Outage reported; it's already confirmed and your report was added to it"
+      : "Outage reported successfully",
+    data: report,
   })
 }
 

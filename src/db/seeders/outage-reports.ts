@@ -14,7 +14,7 @@ type SeedReport = {
 
 /*
 Pending reports for the Zone Managers to triage, and a dismissed one for Customer 01, who sees
-both statuses. Linked reports come with the outages in a later step
+both statuses. The outages seeder links the Dhanmondi one
 */
 const REPORTS: SeedReport[] = [
   {

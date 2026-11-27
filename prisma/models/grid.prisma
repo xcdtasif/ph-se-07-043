@@ -8,6 +8,7 @@ model Zone {
 
   feeders   Feeder[]
   employees Employee[]
+  outages   Outage[]
 
   @@unique([code], map: "zones_code_active_key", where: raw("deleted_at IS NULL"))
   @@map("zones")
@@ -44,6 +45,7 @@ model Area {
   feeder        Feeder         @relation(fields: [feederId], references: [id])
   customers     Customer[]
   outageReports OutageReport[]
+  outageAreas   OutageArea[]
 
   @@unique([feederId, name], map: "areas_feeder_id_name_active_key", where: raw("deleted_at IS NULL"))
   @@index([feederId])

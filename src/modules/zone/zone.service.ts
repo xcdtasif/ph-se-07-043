@@ -59,7 +59,7 @@ const updateZone = async (id: string, { name, code }: UpdateZonePayload) => {
     data: { ...(name && { name }), ...(code && { code }) },
     select: zoneSelect,
   })
-  await bumpCache("grid", "schedules")
+  await bumpCache("grid", "schedules", "outages")
 
   return updated
 }
@@ -97,7 +97,7 @@ const deleteZone = async (adminId: string, id: string) => {
       after: { deletedAt: zone.deletedAt?.toISOString() ?? null },
     })
   })
-  await bumpCache("grid", "schedules")
+  await bumpCache("grid", "schedules", "outages")
 }
 
 export const zoneService = { getAllZones, createZone, updateZone, deleteZone }
