@@ -5,7 +5,7 @@ zone; an admin posts `ZONE_MANAGER` jobs and names the zone. Each manages only t
 role they hire: a Zone Manager their zone's technician postings, an admin every Zone Manager
 posting.
 
-Applicants can apply while a posting is `OPEN`. It turns `CLOSED` when its poster closes it, or
+Applicants [apply](application.md#apply) while a posting is `OPEN`. It turns `CLOSED` when its poster closes it, or
 once its `deadline` day ends in Dhaka time; nothing has to run for that, reads work it out from
 the date.
 
@@ -153,7 +153,8 @@ the zone has none left.
 
 Changes a posting the caller manages and returns the [job posting](#job-posting-object). Its zone
 and role stay. `status` closes it (`CLOSED`) or reopens it (`OPEN`); reopening after the deadline
-needs a new `deadline` in the same request.
+needs a new `deadline` in the same request. Once anyone has applied, the fee stays: close the
+posting and post a new one instead.
 
 **Body**
 
@@ -170,16 +171,17 @@ rules of [Create Job Posting](#create-job-posting), and `status`: `OPEN` or `CLO
 
 **Responses**
 
-| Status | When                                               | Message                                                        |
-| ------ | -------------------------------------------------- | -------------------------------------------------------------- |
-| 200    | Success                                            | `Job posting updated successfully`                             |
-| 400    | Validation failed, or empty body                   | `Validation of params failed` / `Validation of body failed`    |
-| 400    | Zone Manager posting, `vacancies` ≠ 1              | `A zone has one Zone Manager`                                  |
-| 403    | Zone Manager, a Zone Manager posting               | `Zone Manager postings are managed by admins`                  |
-| 403    | Zone Manager, another zone's posting               | `This job posting isn't in your zone`                          |
-| 403    | Admin, a technician posting                        | `Technician postings are managed by their zone's Zone Manager` |
-| 404    | No job posting with this id, or deleted            | `Job posting not found`                                        |
-| 409    | `status: OPEN` after the deadline, no new deadline | `The deadline has passed; set a new one to reopen`             |
+| Status | When                                               | Message                                                                               |
+| ------ | -------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 200    | Success                                            | `Job posting updated successfully`                                                    |
+| 400    | Validation failed, or empty body                   | `Validation of params failed` / `Validation of body failed`                           |
+| 400    | Zone Manager posting, `vacancies` ≠ 1              | `A zone has one Zone Manager`                                                         |
+| 403    | Zone Manager, a Zone Manager posting               | `Zone Manager postings are managed by admins`                                         |
+| 403    | Zone Manager, another zone's posting               | `This job posting isn't in your zone`                                                 |
+| 403    | Admin, a technician posting                        | `Technician postings are managed by their zone's Zone Manager`                        |
+| 404    | No job posting with this id, or deleted            | `Job posting not found`                                                               |
+| 409    | `status: OPEN` after the deadline, no new deadline | `The deadline has passed; set a new one to reopen`                                    |
+| 409    | A new `applicationFee` after someone applied       | `People have applied at this fee; close this posting and post a new one to change it` |
 
 ---
 
@@ -189,14 +191,17 @@ rules of [Create Job Posting](#create-job-posting), and `status`: `OPEN` or `CLO
 
 Soft deletes a posting the caller manages, so it leaves every list. Returns no `data`. To stop
 applications but keep it listed, close it with [Update Job Posting](#update-job-posting) instead.
+A posting with [applications](application.md) can't be deleted, since its applicants follow it;
+close it instead.
 
 **Responses**
 
-| Status | When                                    | Message                                                        |
-| ------ | --------------------------------------- | -------------------------------------------------------------- |
-| 200    | Success                                 | `Job posting deleted successfully`                             |
-| 400    | `id` isn't a UUID                       | `Validation of params failed`                                  |
-| 403    | Zone Manager, a Zone Manager posting    | `Zone Manager postings are managed by admins`                  |
-| 403    | Zone Manager, another zone's posting    | `This job posting isn't in your zone`                          |
-| 403    | Admin, a technician posting             | `Technician postings are managed by their zone's Zone Manager` |
-| 404    | No job posting with this id, or deleted | `Job posting not found`                                        |
+| Status | When                                    | Message                                                          |
+| ------ | --------------------------------------- | ---------------------------------------------------------------- |
+| 200    | Success                                 | `Job posting deleted successfully`                               |
+| 400    | `id` isn't a UUID                       | `Validation of params failed`                                    |
+| 403    | Zone Manager, a Zone Manager posting    | `Zone Manager postings are managed by admins`                    |
+| 403    | Zone Manager, another zone's posting    | `This job posting isn't in your zone`                            |
+| 403    | Admin, a technician posting             | `Technician postings are managed by their zone's Zone Manager`   |
+| 404    | No job posting with this id, or deleted | `Job posting not found`                                          |
+| 409    | Someone has applied                     | `This posting has applications; close it instead of deleting it` |

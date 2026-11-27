@@ -44,17 +44,18 @@ const closedWhere = (today: string): Prisma.JobPostingWhereInput => ({
   OR: [{ status: "CLOSED" }, { deadline: { lt: toDateValue(today) } }],
 })
 
-// The status applicants see, and the deadline as the date it was set as
-const toPosting = (posting: SelectedPosting, today = dhakaDate()) => {
-  const deadline = toDateString(posting.deadline)
+// Applicants can still apply: not closed, and the deadline day hasn't ended in Dhaka
+export const isOpenPosting = (
+  posting: { status: "OPEN" | "CLOSED"; deadline: Date },
+  today = dhakaDate(),
+) => posting.status === "OPEN" && toDateString(posting.deadline) >= today
 
-  return {
-    ...posting,
-    deadline,
-    status:
-      posting.status === "OPEN" && deadline >= today ? ("OPEN" as const) : ("CLOSED" as const),
-  }
-}
+// The status applicants see, and the deadline as the date it was set as
+const toPosting = (posting: SelectedPosting, today = dhakaDate()) => ({
+  ...posting,
+  deadline: toDateString(posting.deadline),
+  status: isOpenPosting(posting, today) ? ("OPEN" as const) : ("CLOSED" as const),
+})
 
 const postingNotFound = () => new AppError(httpStatus.NOT_FOUND, "Job posting not found")
 
@@ -222,22 +223,39 @@ const updateJobPosting = async (user: AuthUser, id: string, payload: UpdateJobPo
     ])
   }
 
-  // Conditional, so a posting deleted meanwhile isn't changed
-  const { count } = await prisma.jobPosting.updateMany({
-    where: { id, deletedAt: null },
-    data: {
-      ...(fields.title !== undefined && { title: fields.title }),
-      ...(fields.description !== undefined && { description: fields.description }),
-      ...(fields.vacancies !== undefined && { vacancies: fields.vacancies }),
-      ...(fields.applicationFee !== undefined && { applicationFee: fields.applicationFee }),
-      ...(fields.status !== undefined && { status: fields.status }),
-      ...(deadline !== undefined && { deadline: toDateValue(deadline) }),
-    },
-  })
+  await prisma.$transaction(async (tx) => {
+    // Applying holds the posting FOR SHARE, so the check below sees every application
+    if (!(await lockLiveRow(tx, "job_postings", id, "UPDATE"))) {
+      throw postingNotFound()
+    }
 
-  if (count === 0) {
-    throw postingNotFound()
-  }
+    if (fields.applicationFee !== undefined) {
+      const current = await tx.jobPosting.findUniqueOrThrow({
+        where: { id },
+        select: { applicationFee: true, _count: { select: { applications: true } } },
+      })
+
+      // Everyone applies at the same fee
+      if (current.applicationFee !== fields.applicationFee && current._count.applications > 0) {
+        throw new AppError(
+          httpStatus.CONFLICT,
+          "People have applied at this fee; close this posting and post a new one to change it",
+        )
+      }
+    }
+
+    await tx.jobPosting.update({
+      where: { id },
+      data: {
+        ...(fields.title !== undefined && { title: fields.title }),
+        ...(fields.description !== undefined && { description: fields.description }),
+        ...(fields.vacancies !== undefined && { vacancies: fields.vacancies }),
+        ...(fields.applicationFee !== undefined && { applicationFee: fields.applicationFee }),
+        ...(fields.status !== undefined && { status: fields.status }),
+        ...(deadline !== undefined && { deadline: toDateValue(deadline) }),
+      },
+    })
+  })
 
   await bumpCache("jobs")
 
@@ -246,18 +264,28 @@ const updateJobPosting = async (user: AuthUser, id: string, payload: UpdateJobPo
   )
 }
 
-// Soft delete: the posting leaves every list, and its row stays for the applications to come
+/*
+Soft delete: the posting leaves every list. One with applications stays, since its applicants paid
+and follow it in their dashboard; closing it stops new ones
+*/
 const deleteJobPosting = async (user: AuthUser, id: string) => {
   await findManagedPosting(user, id)
 
-  const { count } = await prisma.jobPosting.updateMany({
-    where: { id, deletedAt: null },
-    data: { deletedAt: new Date() },
-  })
+  await prisma.$transaction(async (tx) => {
+    // Applying holds the posting FOR SHARE, so an application can't slip in after the count
+    if (!(await lockLiveRow(tx, "job_postings", id, "UPDATE"))) {
+      throw postingNotFound()
+    }
 
-  if (count === 0) {
-    throw postingNotFound()
-  }
+    if ((await tx.application.count({ where: { jobPostingId: id } })) > 0) {
+      throw new AppError(
+        httpStatus.CONFLICT,
+        "This posting has applications; close it instead of deleting it",
+      )
+    }
+
+    await tx.jobPosting.update({ where: { id }, data: { deletedAt: new Date() } })
+  })
 
   await bumpCache("jobs")
 }

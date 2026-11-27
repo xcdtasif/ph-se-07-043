@@ -8,6 +8,7 @@ import { env } from "./config/env.js"
 import { errorHandler } from "./middlewares/error-handler.js"
 import { notFound } from "./middlewares/not-found.js"
 import { rateLimit } from "./middlewares/rate-limit.js"
+import { applicationRouter } from "./modules/application/application.routes.js"
 import { areaRouter } from "./modules/area/area.routes.js"
 import { authRouter } from "./modules/auth/auth.routes.js"
 import { customerRouter } from "./modules/customer/customer.routes.js"
@@ -63,6 +64,7 @@ app.use("/api/v1/employees", employeeRouter)
 
 // Hiring
 app.use("/api/v1/job-postings", jobPostingRouter)
+app.use("/api/v1/applications", applicationRouter)
 
 // Admin
 app.use("/api/v1/admin/users", adminUserRouter)

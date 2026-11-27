@@ -37,6 +37,33 @@ function getEnvAsDuration(key: string): StringValue {
   return value
 }
 
+/*
+Cloudinary's single variable, cloudinary://<api_key>:<api_secret>@<cloud_name>, checked here so a
+bad one stops the server at startup instead of failing the first upload
+*/
+function getEnvAsCloudinary(key: string) {
+  const value = getEnv(key)
+  let url: URL | undefined
+
+  try {
+    url = new URL(value)
+  } catch {
+    url = undefined
+  }
+
+  if (!url || url.protocol !== "cloudinary:" || !url.username || !url.password || !url.hostname) {
+    throw new Error(
+      `Environment variable ${key} must look like cloudinary://<api_key>:<api_secret>@<cloud_name>`,
+    )
+  }
+
+  return {
+    cloudName: url.hostname,
+    apiKey: decodeURIComponent(url.username),
+    apiSecret: decodeURIComponent(url.password),
+  }
+}
+
 const nodeEnv = getEnv("NODE_ENV")
 const validNodeEnv = ["development", "production"]
 
@@ -70,4 +97,6 @@ export const env = {
 
   GOOGLE_CLIENT_ID: getEnv("GOOGLE_CLIENT_ID"),
   GOOGLE_CLIENT_SECRET: getEnv("GOOGLE_CLIENT_SECRET"),
+
+  CLOUDINARY: getEnvAsCloudinary("CLOUDINARY_URL"),
 } as const

@@ -1,6 +1,6 @@
 import { Prisma } from "../generated/prisma/client.js"
 
-type SoftDeleteTable = "zones" | "feeders" | "areas"
+type SoftDeleteTable = "zones" | "feeders" | "areas" | "job_postings"
 
 /*
 Locks a row that isn't soft deleted and says whether it exists. Deleting a parent takes UPDATE

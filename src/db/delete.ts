@@ -26,6 +26,9 @@ const deleteAll = async () => {
   const slots = await prisma.loadSheddingSlot.deleteMany()
   logCount(slots.count, "load shedding slot", "load shedding slots", "deleted")
 
+  const applications = await prisma.application.deleteMany()
+  logCount(applications.count, "application", "applications", "deleted")
+
   const postings = await prisma.jobPosting.deleteMany()
   logCount(postings.count, "job posting", "job postings", "deleted")
 

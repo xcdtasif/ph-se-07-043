@@ -16,6 +16,7 @@ model User {
   dismissedReports OutageReport[]
   confirmedOutages Outage[]
   jobPostings      JobPosting[]
+  applications     Application[]
 
   @@unique([email])
   @@unique([googleId])
