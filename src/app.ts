@@ -13,6 +13,7 @@ import { authRouter } from "./modules/auth/auth.routes.js"
 import { customerRouter } from "./modules/customer/customer.routes.js"
 import { employeeRouter } from "./modules/employee/employee.routes.js"
 import { feederRouter } from "./modules/feeder/feeder.routes.js"
+import { jobPostingRouter } from "./modules/job-posting/job-posting.routes.js"
 import { outageReportRouter } from "./modules/outage-report/outage-report.routes.js"
 import { outageRouter } from "./modules/outage/outage.routes.js"
 import { scheduleRouter } from "./modules/schedule/schedule.routes.js"
@@ -59,6 +60,9 @@ app.use("/api/v1/outages", outageRouter)
 
 // Employee
 app.use("/api/v1/employees", employeeRouter)
+
+// Hiring
+app.use("/api/v1/job-postings", jobPostingRouter)
 
 // Admin
 app.use("/api/v1/admin/users", adminUserRouter)

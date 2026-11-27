@@ -138,13 +138,14 @@ Soft deletes a zone. Returns no `data`.
 
 **Responses**
 
-| Status | When                             | Message                             |
-| ------ | -------------------------------- | ----------------------------------- |
-| 200    | Success                          | `Zone deleted successfully`         |
-| 400    | `id` isn't a UUID                | `Validation of params failed`       |
-| 404    | No zone with this id, or deleted | `Zone not found`                    |
-| 409    | The zone still has feeders       | `Delete this zone's feeders first`  |
-| 409    | The zone still has employees     | `End this zone's employments first` |
+| Status | When                             | Message                                 |
+| ------ | -------------------------------- | --------------------------------------- |
+| 200    | Success                          | `Zone deleted successfully`             |
+| 400    | `id` isn't a UUID                | `Validation of params failed`           |
+| 404    | No zone with this id, or deleted | `Zone not found`                        |
+| 409    | The zone still has feeders       | `Delete this zone's feeders first`      |
+| 409    | The zone still has employees     | `End this zone's employments first`     |
+| 409    | The zone still has job postings  | `Delete this zone's job postings first` |
 
 ---
 

@@ -15,6 +15,7 @@ model User {
   createdSlots     LoadSheddingSlot[]
   dismissedReports OutageReport[]
   confirmedOutages Outage[]
+  jobPostings      JobPosting[]
 
   @@unique([email])
   @@unique([googleId])

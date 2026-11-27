@@ -59,7 +59,7 @@ const updateZone = async (id: string, { name, code }: UpdateZonePayload) => {
     data: { ...(name && { name }), ...(code && { code }) },
     select: zoneSelect,
   })
-  await bumpCache("grid", "schedules", "outages")
+  await bumpCache("grid", "schedules", "outages", "jobs")
 
   return updated
 }
@@ -80,6 +80,13 @@ const deleteZone = async (adminId: string, id: string) => {
 
     if (employees > 0) {
       throw new AppError(httpStatus.CONFLICT, "End this zone's employments first")
+    }
+
+    // Posting a job locks the zone FOR SHARE, so none can be added while this checks
+    const postings = await tx.jobPosting.count({ where: { zoneId: id, deletedAt: null } })
+
+    if (postings > 0) {
+      throw new AppError(httpStatus.CONFLICT, "Delete this zone's job postings first")
     }
 
     const zone = await tx.zone.update({

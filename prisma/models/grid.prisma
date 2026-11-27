@@ -6,9 +6,10 @@ model Zone {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
-  feeders   Feeder[]
-  employees Employee[]
-  outages   Outage[]
+  feeders     Feeder[]
+  employees   Employee[]
+  outages     Outage[]
+  jobPostings JobPosting[]
 
   @@unique([code], map: "zones_code_active_key", where: raw("deleted_at IS NULL"))
   @@map("zones")

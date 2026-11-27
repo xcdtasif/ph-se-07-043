@@ -4,10 +4,11 @@ import { redis } from "./redis.js"
 Public reads are cached in Redis under a version number per namespace. A write bumps the
 version after it commits, so every older entry stops being read at once; the TTL then clears
 them out. "grid" holds zones, feeders and areas; "schedules" holds slots, which show feeder
-names; "outages" holds outages, which show zone, feeder and area names. So a grid write that
-changes a name bumps the namespaces that show it
+names; "outages" holds outages, which show zone, feeder and area names; "jobs" holds job
+postings, which show zone names and codes. So a grid write that changes a name bumps the
+namespaces that show it
 */
-type Namespace = "grid" | "schedules" | "outages"
+type Namespace = "grid" | "schedules" | "outages" | "jobs"
 
 const TTL_SECONDS = 5 * 60
 const TIMEOUT_MS = 1000
