@@ -69,8 +69,9 @@ export const changePasswordSchema = z
 
 export type ChangePasswordPayload = z.output<typeof changePasswordSchema>
 
+// The one-time code from the frontend's Google popup
 export const googleLoginSchema = z.strictObject({
-  idToken: z.string().min(1).max(4096),
+  code: z.string().min(1).max(2048),
 })
 
 export type GoogleLoginPayload = z.output<typeof googleLoginSchema>

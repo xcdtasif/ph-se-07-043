@@ -68,9 +68,9 @@ Edit the email and password in the **Log In User** body to switch accounts.
 
 ## Google Login
 
-**Google Login** needs an ID token that only Google's sign-in button can produce, and it expires
-after an hour. Sign in with Google on the frontend, copy the `credential` it receives (or the
-`idToken` the frontend sends) from the browser's network tab, and paste it into the body.
+**Google Login** needs a one-time code from Google's sign-in popup, which only the frontend can open,
+and the frontend uses the code straight away. Test Google sign-in from the frontend's login page;
+the Postman request documents the body and responses.
 
 ## Resetting A Password
 

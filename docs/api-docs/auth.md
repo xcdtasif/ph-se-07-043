@@ -211,7 +211,8 @@ Signs in with email and password.
 
 `POST /api/v1/auth/google` · Public
 
-Signs in with the ID token from the frontend's Sign in with Google button. One account per email:
+Signs in with the one-time code from Google's sign-in popup on the frontend (the auth-code flow).
+The API trades the code with Google for the user's ID token and checks it. One account per email:
 
 - A user who has signed in with this Google account before is signed in.
 - Otherwise, if a user already has the email, Google is linked to that account and they can use
@@ -222,15 +223,15 @@ Only emails Google has verified are accepted. No bot check: Google's sign-in rep
 
 **Body**
 
-| Field     | Type   | Rules                                   |
-| --------- | ------ | --------------------------------------- |
-| `idToken` | string | The `credential` from the Google button |
+| Field  | Type   | Rules                                               |
+| ------ | ------ | --------------------------------------------------- |
+| `code` | string | The `code` from Google's popup; works once, briefly |
 
 **Example**
 
 ```json
 {
-  "idToken": "<Google ID token>"
+  "code": "<code from Google's popup>"
 }
 ```
 
@@ -241,7 +242,7 @@ Only emails Google has verified are accepted. No bot check: Google's sign-in rep
 | 200    | Success                                        | `Logged in with Google successfully`             |
 | 400    | Validation failed                              | `Validation of body failed`                      |
 | 400    | Google hasn't verified the email               | `Your Google email isn't verified`               |
-| 401    | Token invalid, expired or for another app      | `Invalid or expired Google token`                |
+| 401    | Code invalid, used or expired                  | `Google sign-in failed or expired, try again`    |
 | 403    | Account is banned                              | `Your account has been banned`                   |
 | 409    | Email already linked to another Google account | `This email is linked to another Google account` |
 

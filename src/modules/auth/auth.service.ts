@@ -2,7 +2,7 @@ import { createHash, randomInt, timingSafeEqual } from "crypto"
 
 import httpStatus from "http-status"
 
-import { verifyGoogleIdToken } from "../../lib/google.js"
+import { getGoogleProfile } from "../../lib/google.js"
 import { sendMail } from "../../lib/mailer.js"
 import { prisma } from "../../lib/prisma.js"
 import { redis } from "../../lib/redis.js"
@@ -182,10 +182,10 @@ One user per email. Signs in the user with this Google account, or links Google 
 the same email, or creates a user without a password. An email is only trusted once Google has
 verified it, so nobody can take over an account through an unverified Google address
 */
-const googleLogin = async ({ idToken }: GoogleLoginPayload) => {
-  const profile = await verifyGoogleIdToken(idToken).catch((error: unknown) => {
-    console.error("Google ID token check failed:", error instanceof Error ? error.message : error)
-    throw new AppError(httpStatus.UNAUTHORIZED, "Invalid or expired Google token")
+const googleLogin = async ({ code }: GoogleLoginPayload) => {
+  const profile = await getGoogleProfile(code).catch((error: unknown) => {
+    console.error("Google sign-in check failed:", error instanceof Error ? error.message : error)
+    throw new AppError(httpStatus.UNAUTHORIZED, "Google sign-in failed or expired, try again")
   })
 
   if (!profile?.email || !profile.email_verified) {
