@@ -1,6 +1,7 @@
 import { Router } from "express"
 
 import { authenticate } from "../../middlewares/authenticate.js"
+import { authorize } from "../../middlewares/authorize.js"
 import { rateLimit } from "../../middlewares/rate-limit.js"
 import { uploadCv } from "../../middlewares/upload-cv.js"
 import { validate } from "../../middlewares/validate.js"
@@ -8,7 +9,11 @@ import { idParamsSchema } from "../../utils/id-params.js"
 import { requestUser } from "../../utils/request-user.js"
 import { paymentController } from "../payment/payment.controller.js"
 import { applicationController } from "./application.controller.js"
-import { applySchema, myApplicationsQuerySchema } from "./application.schema.js"
+import {
+  applySchema,
+  myApplicationsQuerySchema,
+  updateApplicationStatusSchema,
+} from "./application.schema.js"
 
 const router = Router()
 
@@ -26,6 +31,16 @@ router.post(
   authenticate,
   validate(idParamsSchema, "params"),
   paymentController.createCheckout,
+)
+
+// Update Application Status; the service checks it's the poster's role for this posting
+router.patch(
+  "/:id/status",
+  authenticate,
+  authorize("ZONE_MANAGER", "ADMIN"),
+  validate(idParamsSchema, "params"),
+  validate(updateApplicationStatusSchema, "body"),
+  applicationController.updateApplicationStatus,
 )
 
 export const applicationRouter = router

@@ -178,10 +178,10 @@ const createJobPosting = async (user: AuthUser, payload: CreateJobPostingPayload
 The live posting, if this user manages it: a Zone Manager their zone's technician postings, an
 admin every Zone Manager posting
 */
-const findManagedPosting = async (user: AuthUser, id: string) => {
+export const findManagedPosting = async (user: AuthUser, id: string) => {
   const posting = await prisma.jobPosting.findFirst({
     where: { id, deletedAt: null },
-    select: { role: true, zoneId: true, status: true, deadline: true },
+    select: { id: true, role: true, zoneId: true, status: true, deadline: true },
   })
 
   if (!posting) {
@@ -240,6 +240,19 @@ const updateJobPosting = async (user: AuthUser, id: string, payload: UpdateJobPo
         throw new AppError(
           httpStatus.CONFLICT,
           "People have applied at this fee; close this posting and post a new one to change it",
+        )
+      }
+    }
+
+    // Hiring holds this lock too, so the count can't grow before the update
+    if (fields.vacancies !== undefined) {
+      const hired = await tx.application.count({ where: { jobPostingId: id, status: "HIRED" } })
+
+      if (fields.vacancies < hired) {
+        throw new AppError(
+          httpStatus.CONFLICT,
+          `Vacancies can't go below the ${hired} already hired`,
+          [{ path: "vacancies", message: `At least ${hired}` }],
         )
       }
     }

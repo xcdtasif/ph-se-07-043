@@ -4,7 +4,9 @@ import { authenticate } from "../../middlewares/authenticate.js"
 import { authorize } from "../../middlewares/authorize.js"
 import { validate } from "../../middlewares/validate.js"
 import { idParamsSchema } from "../../utils/id-params.js"
+import { applicationController } from "../application/application.controller.js"
 import { applyHandlers } from "../application/application.routes.js"
+import { postingApplicationsQuerySchema } from "../application/application.schema.js"
 import { jobPostingController } from "./job-posting.controller.js"
 import {
   createJobPostingSchema,
@@ -50,5 +52,14 @@ router.delete(
 
 // Apply; any user who isn't an active employee
 router.post("/:id/applications", ...applyHandlers)
+
+// Get Job Posting Applications; paid ones, for the poster's role
+router.get(
+  "/:id/applications",
+  ...poster,
+  validate(idParamsSchema, "params"),
+  validate(postingApplicationsQuerySchema, "query"),
+  applicationController.getPostingApplications,
+)
 
 export const jobPostingRouter = router

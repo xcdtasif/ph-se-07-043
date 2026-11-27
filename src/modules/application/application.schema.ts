@@ -27,3 +27,20 @@ export const myApplicationsQuerySchema = z.strictObject({
 })
 
 export type MyApplicationsQuery = z.output<typeof myApplicationsQuerySchema>
+
+// Reviewers see applications once the fee is paid
+export const REVIEWABLE_STATUSES = ["SUBMITTED", "SHORTLISTED", "HIRED", "REJECTED"] as const
+
+export const postingApplicationsQuerySchema = z.strictObject({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(10),
+  status: z.enum(REVIEWABLE_STATUSES).optional(),
+})
+
+export type PostingApplicationsQuery = z.output<typeof postingApplicationsQuerySchema>
+
+export const updateApplicationStatusSchema = z.strictObject({
+  status: z.enum(["SHORTLISTED", "REJECTED", "HIRED"]),
+})
+
+export type UpdateApplicationStatusPayload = z.output<typeof updateApplicationStatusSchema>

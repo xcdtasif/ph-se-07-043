@@ -9,14 +9,15 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  customer         Customer?
-  employees        Employee[]
-  auditLogs        AuditLog[]
-  createdSlots     LoadSheddingSlot[]
-  dismissedReports OutageReport[]
-  confirmedOutages Outage[]
-  jobPostings      JobPosting[]
-  applications     Application[]
+  customer             Customer?
+  employees            Employee[]
+  auditLogs            AuditLog[]
+  createdSlots         LoadSheddingSlot[]
+  dismissedReports     OutageReport[]
+  confirmedOutages     Outage[]
+  jobPostings          JobPosting[]
+  applications         Application[]      @relation("ApplicationApplicant")
+  reviewedApplications Application[]      @relation("ApplicationReviewer")
 
   @@unique([email])
   @@unique([googleId])
@@ -43,21 +44,27 @@ model Customer {
   @@map("customers")
 }
 
-// A user's job with the company. Ending employment sets endedAt; the row stays as history.
+/**
+ * A user's job with the company. Ending employment sets endedAt; the row stays as history.
+ * applicationId is the application they were hired through; null for staff added another way
+ */
 model Employee {
-  id        String       @id @default(uuid())
-  userId    String       @map("user_id")
-  role      EmployeeRole
+  id            String       @id @default(uuid())
+  userId        String       @map("user_id")
+  role          EmployeeRole
   // null only for ADMIN, who covers every zone
-  zoneId    String?      @map("zone_id")
-  endedAt   DateTime?    @map("ended_at")
-  createdAt DateTime     @default(now()) @map("created_at")
-  updatedAt DateTime     @updatedAt @map("updated_at")
+  zoneId        String?      @map("zone_id")
+  applicationId String?      @map("application_id")
+  endedAt       DateTime?    @map("ended_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
 
-  user            User     @relation(fields: [userId], references: [id])
-  zone            Zone?    @relation(fields: [zoneId], references: [id])
+  user            User         @relation(fields: [userId], references: [id])
+  zone            Zone?        @relation(fields: [zoneId], references: [id])
+  application     Application? @relation(fields: [applicationId], references: [id])
   assignedOutages Outage[]
 
+  @@unique([applicationId])
   @@unique([userId], map: "employees_user_id_active_key", where: raw("ended_at IS NULL"))
   @@unique([zoneId], map: "employees_zone_id_active_manager_key", where: raw("role = 'ZONE_MANAGER' AND ended_at IS NULL"))
   @@index([zoneId])

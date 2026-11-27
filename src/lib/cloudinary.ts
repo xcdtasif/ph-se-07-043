@@ -12,13 +12,19 @@ cloudinary.config({
 
 /*
 Stored as an image-type asset, which Cloudinary serves as a .pdf link; the free plan only delivers
-it once "Allow delivery of PDF and ZIP files" is on. The id is random, so the link can't be guessed
+it once "Allow delivery of PDF and ZIP files" is on. The id is random, so the link can't be guessed,
+unless publicId is given (the seed's sample CV), which replaces the file already there
 */
-export const uploadPdf = (buffer: Buffer, folder: string) =>
+export const uploadPdf = (buffer: Buffer, folder: string, publicId?: string) =>
   new Promise<{ url: string; publicId: string }>((resolve, reject) => {
     cloudinary.uploader
       .upload_stream(
-        { folder, resource_type: "image", format: "pdf" },
+        {
+          folder,
+          resource_type: "image",
+          format: "pdf",
+          ...(publicId && { public_id: publicId, overwrite: true }),
+        },
         (err?: unknown, result?: UploadApiResponse) => {
           if (err || !result) {
             reject(

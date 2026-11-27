@@ -154,7 +154,7 @@ the zone has none left.
 Changes a posting the caller manages and returns the [job posting](#job-posting-object). Its zone
 and role stay. `status` closes it (`CLOSED`) or reopens it (`OPEN`); reopening after the deadline
 needs a new `deadline` in the same request. Once anyone has applied, the fee stays: close the
-posting and post a new one instead.
+posting and post a new one instead. `vacancies` can't go below the applicants already hired.
 
 **Body**
 
@@ -182,6 +182,7 @@ rules of [Create Job Posting](#create-job-posting), and `status`: `OPEN` or `CLO
 | 404    | No job posting with this id, or deleted            | `Job posting not found`                                                               |
 | 409    | `status: OPEN` after the deadline, no new deadline | `The deadline has passed; set a new one to reopen`                                    |
 | 409    | A new `applicationFee` after someone applied       | `People have applied at this fee; close this posting and post a new one to change it` |
+| 409    | `vacancies` below the number already hired         | `Vacancies can't go below the N already hired`                                        |
 
 ---
 

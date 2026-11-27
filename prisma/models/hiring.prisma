@@ -35,7 +35,7 @@ enum JobPostingStatus {
 /**
  * A user's application for a job posting, with their phone and a PDF CV on Cloudinary. It waits
  * for the fee (PAYMENT_PENDING) and is SUBMITTED once paid; the poster then shortlists, hires or
- * rejects it
+ * rejects it; reviewedById is who made the last of those changes
  */
 model Application {
   id           String            @id @default(uuid())
@@ -46,12 +46,15 @@ model Application {
   // Deletes the file if the application is never saved
   cvPublicId   String            @map("cv_public_id")
   status       ApplicationStatus @default(PAYMENT_PENDING)
+  reviewedById String?           @map("reviewed_by_id")
   createdAt    DateTime          @default(now()) @map("created_at")
   updatedAt    DateTime          @updatedAt @map("updated_at")
 
   jobPosting JobPosting @relation(fields: [jobPostingId], references: [id])
-  user       User       @relation(fields: [userId], references: [id])
+  user       User       @relation("ApplicationApplicant", fields: [userId], references: [id])
+  reviewedBy User?      @relation("ApplicationReviewer", fields: [reviewedById], references: [id])
   payments   Payment[]
+  employee   Employee?
 
   @@unique([jobPostingId, userId])
   @@index([jobPostingId, status])

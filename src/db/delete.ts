@@ -26,6 +26,10 @@ const deleteAll = async () => {
   const slots = await prisma.loadSheddingSlot.deleteMany()
   logCount(slots.count, "load shedding slot", "load shedding slots", "deleted")
 
+  // Before applications, since a hired employee points to theirs
+  const employees = await prisma.employee.deleteMany()
+  logCount(employees.count, "employee", "employees", "deleted")
+
   const payments = await prisma.payment.deleteMany()
   logCount(payments.count, "payment", "payments", "deleted")
 
@@ -37,9 +41,6 @@ const deleteAll = async () => {
 
   const customers = await prisma.customer.deleteMany()
   logCount(customers.count, "customer", "customers", "deleted")
-
-  const employees = await prisma.employee.deleteMany()
-  logCount(employees.count, "employee", "employees", "deleted")
 
   const users = await prisma.user.deleteMany()
   logCount(users.count, "user", "users", "deleted")

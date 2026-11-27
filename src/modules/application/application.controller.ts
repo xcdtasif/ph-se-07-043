@@ -5,7 +5,12 @@ import { AppError } from "../../utils/app-error.js"
 import type { IdParams } from "../../utils/id-params.js"
 import { requestUser } from "../../utils/request-user.js"
 import { sendResponse } from "../../utils/send-response.js"
-import type { ApplyPayload, MyApplicationsQuery } from "./application.schema.js"
+import type {
+  ApplyPayload,
+  MyApplicationsQuery,
+  PostingApplicationsQuery,
+  UpdateApplicationStatusPayload,
+} from "./application.schema.js"
 import { applicationService } from "./application.service.js"
 
 // Only for handlers behind uploadCv, which refuses a request without one
@@ -41,4 +46,41 @@ const getMyApplications = async (req: Request, res: Response) => {
   })
 }
 
-export const applicationController = { apply, getMyApplications }
+const getPostingApplications = async (req: Request<IdParams>, res: Response) => {
+  const { applications, meta } = await applicationService.getPostingApplications(
+    requestUser(req),
+    req.params.id,
+    req.query as unknown as PostingApplicationsQuery,
+  )
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Applications fetched successfully",
+    data: applications,
+    meta,
+  })
+}
+
+const updateApplicationStatus = async (
+  req: Request<IdParams, {}, UpdateApplicationStatusPayload>,
+  res: Response,
+) => {
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Application status updated successfully",
+    data: await applicationService.updateApplicationStatus(
+      requestUser(req),
+      req.params.id,
+      req.body,
+    ),
+  })
+}
+
+export const applicationController = {
+  apply,
+  getMyApplications,
+  getPostingApplications,
+  updateApplicationStatus,
+}
