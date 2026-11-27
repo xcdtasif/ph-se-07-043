@@ -19,6 +19,83 @@ type SeedOutage = {
 }
 
 /*
+Restored outages over the past month, for the analytics: every cause, both seeded zones, and
+restoration times from under an hour to most of a day
+*/
+const HISTORY: SeedOutage[] = [
+  {
+    note: "Transformer overloaded in the heat, replaced overnight",
+    areaNames: ["Mirpur 11, Block B"],
+    hoursAgo: 26 * 24,
+    technician: { email: "technician02@example.com", assignedAfter: 0.5 },
+    startedAfter: 1.5,
+    restoredAfter: 14,
+    cause: "TRANSFORMER_FAULT",
+  },
+  {
+    note: "Cable cut by a drainage dig, spliced",
+    areaNames: ["Pallabi, Section 6", "Pallabi, Section 7"],
+    hoursAgo: 21 * 24,
+    technician: { email: "technician03@example.com", assignedAfter: 0.75 },
+    startedAfter: 1.25,
+    restoredAfter: 7,
+    cause: "CABLE_DAMAGE",
+  },
+  {
+    note: "Storm damage to an overhead line, made safe and repaired",
+    areaNames: ["Mirpur 10, Block A", "Mirpur 10, Block C"],
+    hoursAgo: 17 * 24,
+    technician: { email: "technician01@example.com", assignedAfter: 0.5 },
+    startedAfter: 1,
+    restoredAfter: 4.5,
+    cause: "EMERGENCY_MAINTENANCE",
+  },
+  {
+    note: "Breaker tripped during a voltage dip",
+    areaNames: ["Mirpur 12, Block D"],
+    hoursAgo: 12 * 24,
+    technician: { email: "technician02@example.com", assignedAfter: 0.25 },
+    restoredAfter: 0.5,
+    cause: "TEMPORARY_TRIP",
+  },
+  {
+    note: "Bird strike on a pole-mounted switch",
+    areaNames: ["Pallabi, Section 7"],
+    hoursAgo: 8 * 24,
+    technician: { email: "technician03@example.com", assignedAfter: 0.5 },
+    startedAfter: 1,
+    restoredAfter: 2.5,
+    cause: "OTHER",
+  },
+  {
+    note: "Joint failure on the Road 32 cable, rejointed",
+    areaNames: ["Dhanmondi Road 32"],
+    hoursAgo: 24 * 24,
+    technician: { email: "technician04@example.com", assignedAfter: 1 },
+    startedAfter: 2,
+    restoredAfter: 9,
+    cause: "CABLE_DAMAGE",
+  },
+  {
+    note: "Distribution transformer burned out, replaced",
+    areaNames: ["Jigatola", "Hazaribagh"],
+    hoursAgo: 15 * 24,
+    technician: { email: "technician05@example.com", assignedAfter: 0.75 },
+    startedAfter: 1.5,
+    restoredAfter: 18,
+    cause: "TRANSFORMER_FAULT",
+  },
+  {
+    note: "Breaker tripped and was reset",
+    areaNames: ["Dhanmondi Road 27"],
+    hoursAgo: 6 * 24,
+    technician: { email: "technician04@example.com", assignedAfter: 0.25 },
+    restoredAfter: 0.75,
+    cause: "TEMPORARY_TRIP",
+  },
+]
+
+/*
 One outage per status. Technician 01 has an outage in progress and two restored (one a temporary
 trip that cleared before work started); Technician 02 has an assigned one. Dhanmondi's confirmed
 outage links Customer 04's pending report and waits for a technician. Mirpur 10, Block C and
@@ -172,7 +249,7 @@ export const seedOutages = async () => {
   const seeded = new Set(existing.map((outage) => outage.note))
   let count = 0
 
-  for (const seed of OUTAGES) {
+  for (const seed of [...HISTORY, ...OUTAGES]) {
     if (!seeded.has(seed.note) && (await seedOutage(seed))) {
       count++
     }

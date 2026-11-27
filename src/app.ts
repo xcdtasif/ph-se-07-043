@@ -8,6 +8,7 @@ import { env } from "./config/env.js"
 import { errorHandler } from "./middlewares/error-handler.js"
 import { notFound } from "./middlewares/not-found.js"
 import { rateLimit } from "./middlewares/rate-limit.js"
+import { analyticsRouter } from "./modules/analytics/analytics.routes.js"
 import { applicationRouter } from "./modules/application/application.routes.js"
 import { areaRouter } from "./modules/area/area.routes.js"
 import { authRouter } from "./modules/auth/auth.routes.js"
@@ -72,6 +73,9 @@ app.use("/api/v1/applications", applicationRouter)
 
 // Payment
 app.use("/api/v1/payments", paymentRouter)
+
+// Analytics
+app.use("/api/v1/analytics", analyticsRouter)
 
 // Admin
 app.use("/api/v1/admin/users", adminUserRouter)
