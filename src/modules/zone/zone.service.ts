@@ -1,6 +1,7 @@
 import httpStatus from "http-status"
 
 import { writeAuditLog } from "../../lib/audit.js"
+import { bumpCache, cached } from "../../lib/cache.js"
 import { prisma } from "../../lib/prisma.js"
 import { AppError } from "../../utils/app-error.js"
 import { lockLiveRow } from "../../utils/lock-live-row.js"
@@ -25,16 +26,21 @@ const assertCodeFree = async (code: string, exceptId?: string) => {
 }
 
 const getAllZones = () =>
-  prisma.zone.findMany({
-    where: { deletedAt: null },
-    select: zoneSelect,
-    orderBy: { name: "asc" },
-  })
+  cached("grid", "zones", () =>
+    prisma.zone.findMany({
+      where: { deletedAt: null },
+      select: zoneSelect,
+      orderBy: { name: "asc" },
+    }),
+  )
 
 const createZone = async (payload: CreateZonePayload) => {
   await assertCodeFree(payload.code)
 
-  return prisma.zone.create({ data: payload, select: zoneSelect })
+  const zone = await prisma.zone.create({ data: payload, select: zoneSelect })
+  await bumpCache("grid")
+
+  return zone
 }
 
 const updateZone = async (id: string, { name, code }: UpdateZonePayload) => {
@@ -48,15 +54,18 @@ const updateZone = async (id: string, { name, code }: UpdateZonePayload) => {
     await assertCodeFree(code, id)
   }
 
-  return prisma.zone.update({
+  const updated = await prisma.zone.update({
     where: { id, deletedAt: null },
     data: { ...(name && { name }), ...(code && { code }) },
     select: zoneSelect,
   })
+  await bumpCache("grid", "schedules")
+
+  return updated
 }
 
-const deleteZone = (adminId: string, id: string) =>
-  prisma.$transaction(async (tx) => {
+const deleteZone = async (adminId: string, id: string) => {
+  await prisma.$transaction(async (tx) => {
     if (!(await lockLiveRow(tx, "zones", id, "UPDATE"))) {
       throw zoneNotFound()
     }
@@ -88,5 +97,7 @@ const deleteZone = (adminId: string, id: string) =>
       after: { deletedAt: zone.deletedAt?.toISOString() ?? null },
     })
   })
+  await bumpCache("grid", "schedules")
+}
 
 export const zoneService = { getAllZones, createZone, updateZone, deleteZone }

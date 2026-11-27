@@ -1,6 +1,7 @@
 import httpStatus from "http-status"
 
 import { writeAuditLog } from "../../lib/audit.js"
+import { bumpCache, cached } from "../../lib/cache.js"
 import { prisma } from "../../lib/prisma.js"
 import { AppError } from "../../utils/app-error.js"
 import { lockLiveRow } from "../../utils/lock-live-row.js"
@@ -25,16 +26,18 @@ const assertCodeFree = async (code: string, exceptId?: string) => {
 }
 
 const getAllFeeders = ({ zoneId }: FeederListQuery) =>
-  prisma.feeder.findMany({
-    where: { deletedAt: null, ...(zoneId && { zoneId }) },
-    select: feederSelect,
-    orderBy: { code: "asc" },
-  })
+  cached("grid", `feeders:${zoneId ?? "all"}`, () =>
+    prisma.feeder.findMany({
+      where: { deletedAt: null, ...(zoneId && { zoneId }) },
+      select: feederSelect,
+      orderBy: { code: "asc" },
+    }),
+  )
 
 const createFeeder = async (payload: CreateFeederPayload) => {
   await assertCodeFree(payload.code)
 
-  return prisma.$transaction(async (tx) => {
+  const feeder = await prisma.$transaction(async (tx) => {
     // Holds the zone until the feeder is saved, so the zone can't be deleted meanwhile
     if (!(await lockLiveRow(tx, "zones", payload.zoneId, "SHARE"))) {
       throw new AppError(httpStatus.NOT_FOUND, "Zone not found", [
@@ -44,6 +47,9 @@ const createFeeder = async (payload: CreateFeederPayload) => {
 
     return tx.feeder.create({ data: payload, select: feederSelect })
   })
+  await bumpCache("grid")
+
+  return feeder
 }
 
 const updateFeeder = async (id: string, { name, code }: UpdateFeederPayload) => {
@@ -60,15 +66,18 @@ const updateFeeder = async (id: string, { name, code }: UpdateFeederPayload) => 
     await assertCodeFree(code, id)
   }
 
-  return prisma.feeder.update({
+  const updated = await prisma.feeder.update({
     where: { id, deletedAt: null },
     data: { ...(name && { name }), ...(code && { code }) },
     select: feederSelect,
   })
+  await bumpCache("grid", "schedules")
+
+  return updated
 }
 
-const deleteFeeder = (adminId: string, id: string) =>
-  prisma.$transaction(async (tx) => {
+const deleteFeeder = async (adminId: string, id: string) => {
+  await prisma.$transaction(async (tx) => {
     if (!(await lockLiveRow(tx, "feeders", id, "UPDATE"))) {
       throw feederNotFound()
     }
@@ -102,5 +111,7 @@ const deleteFeeder = (adminId: string, id: string) =>
       after: { deletedAt: feeder.deletedAt?.toISOString() ?? null },
     })
   })
+  await bumpCache("grid", "schedules")
+}
 
 export const feederService = { getAllFeeders, createFeeder, updateFeeder, deleteFeeder }

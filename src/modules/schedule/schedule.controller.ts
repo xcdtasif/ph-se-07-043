@@ -4,8 +4,22 @@ import httpStatus from "http-status"
 import type { IdParams } from "../../utils/id-params.js"
 import { requestUser } from "../../utils/request-user.js"
 import { sendResponse } from "../../utils/send-response.js"
-import type { ConfirmDayPayload, CreateSlotPayload, UpdateSlotPayload } from "./schedule.schema.js"
+import type {
+  ConfirmDayPayload,
+  CreateSlotPayload,
+  ScheduleQuery,
+  UpdateSlotPayload,
+} from "./schedule.schema.js"
 import { scheduleService } from "./schedule.service.js"
+
+const getSchedule = async (req: Request, res: Response) => {
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Schedule fetched successfully",
+    data: await scheduleService.getSchedule(req.query as unknown as ScheduleQuery),
+  })
+}
 
 const createSlot = async (req: Request<{}, {}, CreateSlotPayload>, res: Response) => {
   sendResponse(res, {
@@ -46,4 +60,4 @@ const confirmDay = async (req: Request<{}, {}, ConfirmDayPayload>, res: Response
   })
 }
 
-export const scheduleController = { createSlot, updateSlot, cancelSlot, confirmDay }
+export const scheduleController = { getSchedule, createSlot, updateSlot, cancelSlot, confirmDay }

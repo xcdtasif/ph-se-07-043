@@ -5,21 +5,22 @@ on it, is without power. A Zone Manager adds `TENTATIVE` slots for the week ahea
 then confirms each day's slots, which become `CONFIRMED`. A slot is never deleted; it's
 `CANCELLED` instead, so the history stays.
 
-A Zone Manager works only on the feeders of their own zone. Days are Dhaka days (`Asia/Dhaka`,
+Anyone can read the schedule. A Zone Manager works only on the feeders of their own zone. Days are Dhaka days (`Asia/Dhaka`,
 UTC+6): a slot belongs to the day it starts on.
 
 ## Endpoints
 
 `:name` is a path param, `?…` means query params and `{…}` means a request body. Details are in each section.
 
-| Name                        | Endpoint                             | Access       |
-| --------------------------- | ------------------------------------ | ------------ |
-| [Create Slot](#create-slot) | `POST /api/v1/schedules`             | Zone Manager |
-| [Update Slot](#update-slot) | `PATCH /api/v1/schedules/:id`        | Zone Manager |
-| [Cancel Slot](#cancel-slot) | `PATCH /api/v1/schedules/:id/cancel` | Zone Manager |
-| [Confirm Day](#confirm-day) | `POST /api/v1/schedules/confirm`     | Zone Manager |
+| Name                          | Endpoint                             | Access       |
+| ----------------------------- | ------------------------------------ | ------------ |
+| [Get Schedule](#get-schedule) | `GET /api/v1/schedules?…`            | Public       |
+| [Create Slot](#create-slot)   | `POST /api/v1/schedules`             | Zone Manager |
+| [Update Slot](#update-slot)   | `PATCH /api/v1/schedules/:id`        | Zone Manager |
+| [Cancel Slot](#cancel-slot)   | `PATCH /api/v1/schedules/:id/cancel` | Zone Manager |
+| [Confirm Day](#confirm-day)   | `POST /api/v1/schedules/confirm`     | Zone Manager |
 
-Every endpoint can also answer:
+Every Zone Manager endpoint can also answer:
 
 | Status | When               | Message                                |
 | ------ | ------------------ | -------------------------------------- |
@@ -49,6 +50,66 @@ Times are returned in UTC; `2026-12-05T03:00:00.000Z` is 9 AM in Dhaka.
 - last 15 minutes to 12 hours
 - not overlap another slot on the same feeder that isn't cancelled. Slots that only touch (one
   ends as the next starts) are fine
+
+---
+
+## Get Schedule
+
+`GET /api/v1/schedules?…` · Public
+
+Returns the slots on one area, feeder or zone that start on a range of Dhaka days, sorted by start
+time. Each [slot](#slot-object) also carries its feeder's `name` and `code`. Cancelled slots are
+included, so someone who saw the forecast learns the power stays on; tentative ones are the
+forecast, confirmed ones are final. Leave out `from` and `to` for the week ahead from today, or send
+today as both for today alone.
+
+Answers are cached for up to 5 minutes and dropped as soon as a slot or the grid changes.
+
+**Query**
+
+| Param      | Rules                                                    | Default        |
+| ---------- | -------------------------------------------------------- | -------------- |
+| `areaId`   | UUID; send exactly one of `areaId`, `feederId`, `zoneId` | —              |
+| `feederId` | UUID                                                     | —              |
+| `zoneId`   | UUID; covers every feeder in the zone                    | —              |
+| `from`     | A date like `2026-11-29`; past days are fine             | Today in Dhaka |
+| `to`       | A date on or after `from`, at most 7 days in all with it | `from` + 6     |
+
+**Example**
+
+`GET /api/v1/schedules?areaId=4c13983d-e6c6-4145-bb9b-da4a85ef8de8&from=2026-11-28&to=2026-11-28`
+
+**Response** (`slots` trimmed to one)
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Schedule fetched successfully",
+  "data": {
+    "from": "2026-11-28",
+    "to": "2026-11-28",
+    "slots": [
+      {
+        "id": "880ade28-b8bb-41ca-933c-f534939e3d0e",
+        "feederId": "c02da91f-48ee-468f-84cb-11d8f132a562",
+        "startsAt": "2026-11-28T02:00:00.000Z",
+        "endsAt": "2026-11-28T04:00:00.000Z",
+        "status": "TENTATIVE",
+        "feeder": { "name": "Mirpur 10", "code": "MIR-F01" }
+      }
+    ]
+  }
+}
+```
+
+**Responses**
+
+| Status | When                                     | Message                                                  |
+| ------ | ---------------------------------------- | -------------------------------------------------------- |
+| 200    | Success                                  | `Schedule fetched successfully`                          |
+| 400    | Validation failed, or not exactly one id | `Validation of query failed`                             |
+| 404    | The area, feeder or zone doesn't exist   | `Area not found` / `Feeder not found` / `Zone not found` |
 
 ---
 

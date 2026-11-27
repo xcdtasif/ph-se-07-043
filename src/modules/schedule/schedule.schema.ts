@@ -1,7 +1,7 @@
 import z from "zod"
 
-import { dhakaDate } from "../../utils/dhaka-time.js"
-import { slotWindowIssues } from "./schedule.rules.js"
+import { dhakaDate, shiftDate } from "../../utils/dhaka-time.js"
+import { SCHEDULE_MAX_DAYS, slotWindowIssues } from "./schedule.rules.js"
 
 // An instant with its offset, e.g. 2026-11-28T09:00:00+06:00 or 2026-11-28T03:00:00Z
 const instantSchema = z.iso
@@ -45,3 +45,34 @@ export const confirmDaySchema = z.strictObject({
 })
 
 export type ConfirmDayPayload = z.output<typeof confirmDaySchema>
+
+const dateSchema = z.iso.date({ error: "Use a date like 2026-11-28" })
+
+/*
+One feeder filter, and a range of Dhaka days: today alone is `from=<today>&to=<today>`, and the
+default is the week ahead from today
+*/
+export const scheduleQuerySchema = z
+  .strictObject({
+    areaId: z.uuid().optional(),
+    feederId: z.uuid().optional(),
+    zoneId: z.uuid().optional(),
+    from: dateSchema.optional(),
+    to: dateSchema.optional(),
+  })
+  .superRefine(({ areaId, feederId, zoneId }, ctx) => {
+    if ([areaId, feederId, zoneId].filter(Boolean).length !== 1) {
+      ctx.addIssue({ code: "custom", path: [], message: "Send one of areaId, feederId or zoneId" })
+    }
+  })
+  .transform(({ from = dhakaDate(), to, ...filter }) => ({
+    ...filter,
+    from,
+    to: to ?? shiftDate(from, SCHEDULE_MAX_DAYS - 1),
+  }))
+  .refine(({ from, to }) => to >= from && to <= shiftDate(from, SCHEDULE_MAX_DAYS - 1), {
+    path: ["to"],
+    error: `Must be on or after from, and at most ${SCHEDULE_MAX_DAYS} days in all`,
+  })
+
+export type ScheduleQuery = z.output<typeof scheduleQuerySchema>

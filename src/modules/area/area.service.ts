@@ -2,6 +2,7 @@ import httpStatus from "http-status"
 
 import type { Prisma } from "../../generated/prisma/client.js"
 import { writeAuditLog } from "../../lib/audit.js"
+import { bumpCache, cached } from "../../lib/cache.js"
 import { prisma } from "../../lib/prisma.js"
 import { AppError } from "../../utils/app-error.js"
 import { lockLiveRow } from "../../utils/lock-live-row.js"
@@ -50,9 +51,7 @@ const assertNameFree = async (
   }
 }
 
-const getAllAreas = async (query: AreaListQuery) => {
-  const { page, limit, search, zoneId, feederId } = query
-
+const findAreas = async ({ page, limit, search, zoneId, feederId }: AreaListQuery) => {
   // Deleting a feeder or zone needs its children deleted first, so live areas have live parents
   const where: Prisma.AreaWhereInput = {
     deletedAt: null,
@@ -75,8 +74,12 @@ const getAllAreas = async (query: AreaListQuery) => {
   return { areas, meta: { page, limit, total } }
 }
 
-const createArea = ({ feederId, name }: CreateAreaPayload) =>
-  prisma.$transaction(async (tx) => {
+// The validated query has a fixed key order, so equal queries give equal keys
+const getAllAreas = (query: AreaListQuery) =>
+  cached("grid", `areas:${JSON.stringify(query)}`, () => findAreas(query))
+
+const createArea = async ({ feederId, name }: CreateAreaPayload) => {
+  const area = await prisma.$transaction(async (tx) => {
     // Holds the feeder until the area is saved, so the feeder can't be deleted meanwhile
     if (!(await lockLiveRow(tx, "feeders", feederId, "SHARE"))) {
       throw new AppError(httpStatus.NOT_FOUND, "Feeder not found", [
@@ -88,6 +91,10 @@ const createArea = ({ feederId, name }: CreateAreaPayload) =>
 
     return tx.area.create({ data: { feederId, name }, select: areaSelect })
   })
+  await bumpCache("grid")
+
+  return area
+}
 
 const updateArea = async (id: string, { name }: UpdateAreaPayload) => {
   const area = await prisma.area.findFirst({
@@ -101,15 +108,18 @@ const updateArea = async (id: string, { name }: UpdateAreaPayload) => {
 
   await assertNameFree(prisma, area.feederId, name, id)
 
-  return prisma.area.update({
+  const updated = await prisma.area.update({
     where: { id, deletedAt: null },
     data: { name },
     select: areaSelect,
   })
+  await bumpCache("grid")
+
+  return updated
 }
 
-const deleteArea = (adminId: string, id: string) =>
-  prisma.$transaction(async (tx) => {
+const deleteArea = async (adminId: string, id: string) => {
+  await prisma.$transaction(async (tx) => {
     if (!(await lockLiveRow(tx, "areas", id, "UPDATE"))) {
       throw areaNotFound()
     }
@@ -135,5 +145,7 @@ const deleteArea = (adminId: string, id: string) =>
       after: { deletedAt: area.deletedAt?.toISOString() ?? null },
     })
   })
+  await bumpCache("grid", "schedules")
+}
 
 export const areaService = { getAllAreas, createArea, updateArea, deleteArea }

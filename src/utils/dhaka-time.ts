@@ -16,3 +16,7 @@ export const dhakaDayRange = (date: string) => {
 
   return { start, end: new Date(start.getTime() + DAY_MS) }
 }
+
+// A calendar date (YYYY-MM-DD) `days` days later, e.g. shiftDate("2026-11-28", 6) is 2026-12-04
+export const shiftDate = (date: string, days: number) =>
+  new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10)

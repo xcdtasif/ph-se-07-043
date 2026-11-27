@@ -2,13 +2,19 @@ import httpStatus from "http-status"
 
 import type { Prisma } from "../../generated/prisma/client.js"
 import { writeAuditLog } from "../../lib/audit.js"
+import { bumpCache, cached } from "../../lib/cache.js"
 import { prisma } from "../../lib/prisma.js"
 import { AppError } from "../../utils/app-error.js"
 import { dhakaDayRange } from "../../utils/dhaka-time.js"
 import { lockLiveRow } from "../../utils/lock-live-row.js"
 import type { AuthUser } from "../auth/auth.user.js"
 import { slotWindowIssues } from "./schedule.rules.js"
-import type { ConfirmDayPayload, CreateSlotPayload, UpdateSlotPayload } from "./schedule.schema.js"
+import type {
+  ConfirmDayPayload,
+  CreateSlotPayload,
+  ScheduleQuery,
+  UpdateSlotPayload,
+} from "./schedule.schema.js"
 
 const slotSelect = {
   id: true,
@@ -97,10 +103,10 @@ const findOwnSlot = async (tx: Prisma.TransactionClient, id: string, zoneId: str
   return slot
 }
 
-const createSlot = (user: AuthUser, { feederId, startsAt, endsAt }: CreateSlotPayload) => {
+const createSlot = async (user: AuthUser, { feederId, startsAt, endsAt }: CreateSlotPayload) => {
   const zoneId = managedZoneId(user)
 
-  return prisma.$transaction(async (tx) => {
+  const slot = await prisma.$transaction(async (tx) => {
     await lockFeederInZone(tx, feederId, zoneId)
     await assertNoOverlap(tx, feederId, startsAt, endsAt)
 
@@ -109,12 +115,15 @@ const createSlot = (user: AuthUser, { feederId, startsAt, endsAt }: CreateSlotPa
       select: slotSelect,
     })
   })
+  await bumpCache("schedules")
+
+  return slot
 }
 
-const updateSlot = (user: AuthUser, id: string, payload: UpdateSlotPayload) => {
+const updateSlot = async (user: AuthUser, id: string, payload: UpdateSlotPayload) => {
   const zoneId = managedZoneId(user)
 
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const { feederId } = await findOwnSlot(tx, id, zoneId)
 
     await lockFeederInZone(tx, feederId, zoneId)
@@ -151,12 +160,15 @@ const updateSlot = (user: AuthUser, id: string, payload: UpdateSlotPayload) => {
       select: slotSelect,
     })
   })
+  await bumpCache("schedules")
+
+  return updated
 }
 
-const cancelSlot = (user: AuthUser, id: string) => {
+const cancelSlot = async (user: AuthUser, id: string) => {
   const zoneId = managedZoneId(user)
 
-  return prisma.$transaction(async (tx) => {
+  const cancelled = await prisma.$transaction(async (tx) => {
     const slot = await findOwnSlot(tx, id, zoneId)
 
     // Conditional, so a slot that started or was cancelled meanwhile isn't cancelled again
@@ -183,10 +195,13 @@ const cancelSlot = (user: AuthUser, id: string) => {
 
     return tx.loadSheddingSlot.findUniqueOrThrow({ where: { id }, select: slotSelect })
   })
+  await bumpCache("schedules")
+
+  return cancelled
 }
 
 // Confirms every tentative slot in the zone that starts on this Dhaka day
-const confirmDay = (user: AuthUser, { date }: ConfirmDayPayload) => {
+const confirmDay = async (user: AuthUser, { date }: ConfirmDayPayload) => {
   const zoneId = managedZoneId(user)
   const { start, end } = dhakaDayRange(date)
   const where = {
@@ -195,7 +210,7 @@ const confirmDay = (user: AuthUser, { date }: ConfirmDayPayload) => {
     startsAt: { gte: start, lt: end },
   } satisfies Prisma.LoadSheddingSlotWhereInput
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const pending = await tx.loadSheddingSlot.findMany({ where, select: { id: true } })
 
     if (pending.length === 0) {
@@ -227,6 +242,76 @@ const confirmDay = (user: AuthUser, { date }: ConfirmDayPayload) => {
 
     return { date, slots }
   })
+  await bumpCache("schedules")
+
+  return result
 }
 
-export const scheduleService = { createSlot, updateSlot, cancelSlot, confirmDay }
+// Which feeders a public read covers; a deleted or unknown area, feeder or zone is a 404
+const feederFilter = async ({
+  areaId,
+  feederId,
+  zoneId,
+}: ScheduleQuery): Promise<Prisma.LoadSheddingSlotWhereInput> => {
+  if (areaId) {
+    const area = await prisma.area.findFirst({
+      where: { id: areaId, deletedAt: null },
+      select: { feederId: true },
+    })
+
+    if (!area) {
+      throw new AppError(httpStatus.NOT_FOUND, "Area not found")
+    }
+
+    return { feederId: area.feederId }
+  }
+
+  if (feederId) {
+    const feeder = await prisma.feeder.findFirst({
+      where: { id: feederId, deletedAt: null },
+      select: { id: true },
+    })
+
+    if (!feeder) {
+      throw new AppError(httpStatus.NOT_FOUND, "Feeder not found")
+    }
+
+    return { feederId }
+  }
+
+  // The schema lets exactly one filter through, so this is the zoneId
+  const zone =
+    zoneId &&
+    (await prisma.zone.findFirst({ where: { id: zoneId, deletedAt: null }, select: { id: true } }))
+
+  if (!zoneId || !zone) {
+    throw new AppError(httpStatus.NOT_FOUND, "Zone not found")
+  }
+
+  return { feeder: { zoneId, deletedAt: null } }
+}
+
+/*
+Slots starting on the Dhaka days from `from` to `to`, cancelled ones included so a customer
+who saw the forecast learns the power stays on
+*/
+const findSchedule = async (query: ScheduleQuery) => {
+  const { from, to } = query
+
+  const slots = await prisma.loadSheddingSlot.findMany({
+    where: {
+      ...(await feederFilter(query)),
+      startsAt: { gte: dhakaDayRange(from).start, lt: dhakaDayRange(to).end },
+    },
+    select: { ...slotSelect, feeder: { select: { name: true, code: true } } },
+    orderBy: [{ startsAt: "asc" }, { feederId: "asc" }],
+  })
+
+  return { from, to, slots }
+}
+
+// The validated query has a fixed key order and resolved dates, so equal reads share a key
+const getSchedule = (query: ScheduleQuery) =>
+  cached("schedules", JSON.stringify(query), () => findSchedule(query))
+
+export const scheduleService = { createSlot, updateSlot, cancelSlot, confirmDay, getSchedule }

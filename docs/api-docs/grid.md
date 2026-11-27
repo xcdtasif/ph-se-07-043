@@ -4,7 +4,8 @@ The grid is how the company splits its network: a **zone** (e.g. Mirpur) has **f
 `MIR-F01`), and each feeder supplies **areas** (e.g. Mirpur 10, Block C). Customers pick an area,
 schedules are set per feeder, and Zone Managers and Technicians work in one zone.
 
-Anyone can read the grid. Only an admin can change it.
+Anyone can read the grid. Only an admin can change it. Reads are cached for up to 5 minutes and
+dropped as soon as the grid changes.
 
 **Deleting is soft.** A deleted zone, feeder or area disappears from every read and can't be used
 again, but its row stays for history, and its code or name is free for a new one. A delete is

@@ -5,6 +5,8 @@ const MINUTE_MS = 60 * 1000
 export const SLOT_MIN_MINUTES = 15
 export const SLOT_MAX_HOURS = 12
 export const SLOT_HORIZON_DAYS = 30
+// The most Dhaka days one public read can cover: a week's forecast
+export const SCHEDULE_MAX_DAYS = 7
 
 /*
 What's wrong with a slot's times, as validation errors. Used by the create schema and by the
