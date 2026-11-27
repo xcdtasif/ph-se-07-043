@@ -10,6 +10,7 @@ import { notFound } from "./middlewares/not-found.js"
 import { rateLimit } from "./middlewares/rate-limit.js"
 import { authRouter } from "./modules/auth/auth.routes.js"
 import { customerRouter } from "./modules/customer/customer.routes.js"
+import { adminUserRouter } from "./modules/user/user.admin.routes.js"
 import { userRouter } from "./modules/user/user.routes.js"
 import "./types/express.js"
 import { sendResponse } from "./utils/send-response.js"
@@ -36,6 +37,9 @@ app.use("/api/v1/users", userRouter)
 
 // Customer
 app.use("/api/v1/customers", customerRouter)
+
+// Admin
+app.use("/api/v1/admin/users", adminUserRouter)
 
 app.use(notFound)
 app.use(errorHandler)

@@ -11,6 +11,7 @@ model User {
 
   customer  Customer?
   employees Employee[]
+  auditLogs AuditLog[]
 
   @@unique([email])
   @@unique([googleId])

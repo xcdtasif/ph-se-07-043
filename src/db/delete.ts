@@ -11,6 +11,9 @@ const deleteAll = async () => {
   Order follows the foreign keys: children are deleted before their parents.
   Not run in a transaction: deleting is safe to repeat if it fails halfway.
   */
+  const auditLogs = await prisma.auditLog.deleteMany()
+  logCount(auditLogs.count, "audit log", "audit logs", "deleted")
+
   const customers = await prisma.customer.deleteMany()
   logCount(customers.count, "customer", "customers", "deleted")
 

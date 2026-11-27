@@ -1,0 +1,19 @@
+// Who changed what, written in the same transaction as the change (src/lib/audit.ts)
+model AuditLog {
+  id         String   @id @default(uuid())
+  // null when the system acted, e.g. a payment webhook
+  actorId    String?  @map("actor_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
