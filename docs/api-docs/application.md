@@ -5,7 +5,7 @@ PDF CV, with their name and email taken from the account. Any logged-in user who
 employee can apply, once per posting, while it's `OPEN`.
 
 An application starts as `PAYMENT_PENDING` and becomes `SUBMITTED` once the posting's
-`applicationFee` is paid. The poster then shortlists, hires or rejects it.
+`applicationFee` is [paid](payment.md#pay-application-fee). The poster then shortlists, hires or rejects it.
 
 ## Endpoints
 

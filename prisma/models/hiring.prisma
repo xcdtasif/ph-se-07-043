@@ -51,6 +51,7 @@ model Application {
 
   jobPosting JobPosting @relation(fields: [jobPostingId], references: [id])
   user       User       @relation(fields: [userId], references: [id])
+  payments   Payment[]
 
   @@unique([jobPostingId, userId])
   @@index([jobPostingId, status])
@@ -64,4 +65,35 @@ enum ApplicationStatus {
   SHORTLISTED
   HIRED
   REJECTED
+}
+
+/**
+ * One Stripe Checkout session for an application's fee. Only the signed webhook changes its
+ * status: COMPLETED submits the application, FAILED (the session expired) lets the user pay again
+ */
+model Payment {
+  id              String        @id @default(uuid())
+  applicationId   String        @map("application_id")
+  // Whole taka, the posting's fee when the checkout opened
+  amount          Int
+  // Lowercase ISO code, as Stripe takes it
+  currency        String        @default("bdt")
+  status          PaymentStatus @default(PENDING)
+  stripeSessionId String        @map("stripe_session_id")
+  paymentIntentId String?       @map("payment_intent_id")
+  paidAt          DateTime?     @map("paid_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  application Application @relation(fields: [applicationId], references: [id])
+
+  @@unique([stripeSessionId])
+  @@index([applicationId, status])
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
 }

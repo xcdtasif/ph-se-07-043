@@ -17,6 +17,7 @@ import { feederRouter } from "./modules/feeder/feeder.routes.js"
 import { jobPostingRouter } from "./modules/job-posting/job-posting.routes.js"
 import { outageReportRouter } from "./modules/outage-report/outage-report.routes.js"
 import { outageRouter } from "./modules/outage/outage.routes.js"
+import { paymentRouter, stripeWebhookRouter } from "./modules/payment/payment.routes.js"
 import { scheduleRouter } from "./modules/schedule/schedule.routes.js"
 import { adminUserRouter } from "./modules/user/user.admin.routes.js"
 import { userRouter } from "./modules/user/user.routes.js"
@@ -31,6 +32,9 @@ app.set("trust proxy", 1)
 
 app.use(helmet())
 app.use(cors({ origin: env.CLIENT_URL }))
+// Before the rate limit, whose per-IP count Stripe's retries could hit, and before JSON parsing
+app.use("/api/v1/stripe/webhook", stripeWebhookRouter)
+
 app.use(rateLimit({ prefix: "global", limit: 100, window: "1 m" }))
 app.use(express.json())
 
@@ -65,6 +69,9 @@ app.use("/api/v1/employees", employeeRouter)
 // Hiring
 app.use("/api/v1/job-postings", jobPostingRouter)
 app.use("/api/v1/applications", applicationRouter)
+
+// Payment
+app.use("/api/v1/payments", paymentRouter)
 
 // Admin
 app.use("/api/v1/admin/users", adminUserRouter)

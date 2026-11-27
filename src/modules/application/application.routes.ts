@@ -6,6 +6,7 @@ import { uploadCv } from "../../middlewares/upload-cv.js"
 import { validate } from "../../middlewares/validate.js"
 import { idParamsSchema } from "../../utils/id-params.js"
 import { requestUser } from "../../utils/request-user.js"
+import { paymentController } from "../payment/payment.controller.js"
 import { applicationController } from "./application.controller.js"
 import { applySchema, myApplicationsQuerySchema } from "./application.schema.js"
 
@@ -17,6 +18,14 @@ router.get(
   authenticate,
   validate(myApplicationsQuerySchema, "query"),
   applicationController.getMyApplications,
+)
+
+// Pay Application Fee
+router.post(
+  "/:id/pay",
+  authenticate,
+  validate(idParamsSchema, "params"),
+  paymentController.createCheckout,
 )
 
 export const applicationRouter = router

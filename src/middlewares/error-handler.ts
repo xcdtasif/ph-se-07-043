@@ -4,6 +4,7 @@ import httpStatus from "http-status"
 import { AppError } from "../utils/app-error.js"
 import type { ErrorItem } from "../utils/app-error.js"
 import { handlePrismaError } from "../utils/handle-prisma-error.js"
+import { handleStripeError } from "../utils/handle-stripe-error.js"
 import { sendResponse } from "../utils/send-response.js"
 
 /*
@@ -40,6 +41,7 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
   let errors: ErrorItem[] = []
 
   const prismaError = handlePrismaError(err)
+  const stripeError = handleStripeError(err)
 
   if (err instanceof AppError) {
     statusCode = err.statusCode
@@ -49,12 +51,16 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
     statusCode = prismaError.statusCode
     message = prismaError.message
     errors = prismaError.errors ?? []
+  } else if (stripeError) {
+    statusCode = stripeError.statusCode
+    message = stripeError.message
   } else if (isExposedHttpError(err)) {
     statusCode = err.status
     message = err.message
   }
 
-  if (statusCode >= httpStatus.INTERNAL_SERVER_ERROR) {
+  // Stripe errors are logged too, since the client only gets a summary
+  if (statusCode >= httpStatus.INTERNAL_SERVER_ERROR || stripeError) {
     console.error(err instanceof Event ? describeEvent(err) : err)
   }
 

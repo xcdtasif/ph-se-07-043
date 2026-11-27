@@ -13,6 +13,7 @@ export const AUDIT_ACTIONS = [
   "OUTAGE_ASSIGNED",
   "OUTAGE_STATUS_CHANGED",
   "EMPLOYMENT_ENDED",
+  "PAYMENT_COMPLETED",
 ] as const
 export const AUDIT_ENTITY_TYPES = [
   "USER",
@@ -22,6 +23,7 @@ export const AUDIT_ENTITY_TYPES = [
   "SLOT",
   "OUTAGE",
   "EMPLOYEE",
+  "PAYMENT",
 ] as const
 
 type AuditEntry = {
