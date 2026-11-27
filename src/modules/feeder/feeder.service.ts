@@ -79,6 +79,14 @@ const deleteFeeder = (adminId: string, id: string) =>
       throw new AppError(httpStatus.CONFLICT, "Delete this feeder's areas first")
     }
 
+    const upcomingSlots = await tx.loadSheddingSlot.count({
+      where: { feederId: id, status: { not: "CANCELLED" }, endsAt: { gt: new Date() } },
+    })
+
+    if (upcomingSlots > 0) {
+      throw new AppError(httpStatus.CONFLICT, "Cancel this feeder's upcoming slots first")
+    }
+
     const feeder = await tx.feeder.update({
       where: { id },
       data: { deletedAt: new Date() },

@@ -6,11 +6,11 @@ schedules are set per feeder, and Zone Managers and Technicians work in one zone
 
 Anyone can read the grid. Only an admin can change it.
 
-**Deleting is soft.** A deleted zone, feeder or area disappears from every read and can't be
-used again, but its row stays for history, and its code or name is free for a new one. A delete
-is refused while something still depends on the row: a zone with feeders or employees, a feeder
-with areas, an area with customers. Every delete is saved to the audit log with the admin who
-made it.
+**Deleting is soft.** A deleted zone, feeder or area disappears from every read and can't be used
+again, but its row stays for history, and its code or name is free for a new one. A delete is
+refused while something still depends on the row: a zone with feeders or employees, a feeder with
+areas or upcoming load shedding slots, an area with customers. Every delete is saved to the audit
+log with the admin who made it.
 
 ## Endpoints
 
@@ -259,12 +259,13 @@ Soft deletes a feeder. Returns no `data`.
 
 **Responses**
 
-| Status | When                               | Message                            |
-| ------ | ---------------------------------- | ---------------------------------- |
-| 200    | Success                            | `Feeder deleted successfully`      |
-| 400    | `id` isn't a UUID                  | `Validation of params failed`      |
-| 404    | No feeder with this id, or deleted | `Feeder not found`                 |
-| 409    | The feeder still has areas         | `Delete this feeder's areas first` |
+| Status | When                               | Message                                     |
+| ------ | ---------------------------------- | ------------------------------------------- |
+| 200    | Success                            | `Feeder deleted successfully`               |
+| 400    | `id` isn't a UUID                  | `Validation of params failed`               |
+| 404    | No feeder with this id, or deleted | `Feeder not found`                          |
+| 409    | The feeder still has areas         | `Delete this feeder's areas first`          |
+| 409    | The feeder has upcoming slots      | `Cancel this feeder's upcoming slots first` |
 
 ---
 

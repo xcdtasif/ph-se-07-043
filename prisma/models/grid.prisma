@@ -23,8 +23,9 @@ model Feeder {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
-  zone  Zone   @relation(fields: [zoneId], references: [id])
+  zone  Zone               @relation(fields: [zoneId], references: [id])
   areas Area[]
+  slots LoadSheddingSlot[]
 
   @@unique([code], map: "feeders_code_active_key", where: raw("deleted_at IS NULL"))
   @@index([zoneId])
