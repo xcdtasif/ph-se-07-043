@@ -48,6 +48,7 @@ export const env = {
   NODE_ENV: getEnv("NODE_ENV"),
   PORT: getEnvAsNumber("PORT"),
   CLIENT_URL: getEnv("CLIENT_URL"),
+  FRONTEND_SECRET: getEnv("FRONTEND_SECRET"),
 
   DATABASE_URL: getEnv("DATABASE_URL"),
   DATABASE_URL_UNPOOLED: getEnv("DATABASE_URL_UNPOOLED"),

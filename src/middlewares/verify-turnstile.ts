@@ -4,6 +4,7 @@ import z from "zod"
 
 import { env } from "../config/env.js"
 import { AppError } from "../utils/app-error.js"
+import { clientIp } from "../utils/client-ip.js"
 
 const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 
@@ -41,7 +42,7 @@ export const verifyTurnstile: RequestHandler = async (req, _res, next) => {
       body: JSON.stringify({
         secret: env.TURNSTILE_SECRET_KEY,
         response: token,
-        remoteip: req.ip,
+        remoteip: clientIp(req),
       }),
       signal: AbortSignal.timeout(5000),
     })

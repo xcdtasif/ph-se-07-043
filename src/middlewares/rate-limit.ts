@@ -5,6 +5,7 @@ import httpStatus from "http-status"
 
 import { redis } from "../lib/redis.js"
 import { AppError } from "../utils/app-error.js"
+import { clientIp } from "../utils/client-ip.js"
 
 type RateLimitOptions = {
   prefix: string
@@ -13,7 +14,7 @@ type RateLimitOptions = {
   key?: (req: Request) => string
 }
 
-const byIp = (req: Request) => req.ip ?? "unknown"
+const byIp = clientIp
 
 /*
 For auth routes: limits guesses against one account from one address without locking the
