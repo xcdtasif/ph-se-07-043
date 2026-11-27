@@ -11,7 +11,7 @@ export const applySchema = z.strictObject({
     .transform((phone) => phone.replace(/[\s-]/g, "").replace(/^\+?88(?=01)/, ""))
     .pipe(
       z.string().regex(/^01[3-9]\d{8}$/, {
-        error: "Use a Bangladeshi mobile number like 01712345678",
+        error: "Use a number like 01712345678",
       }),
     ),
 })
@@ -22,6 +22,8 @@ export const myApplicationsQuerySchema = z.strictObject({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(10),
   status: z.enum(ApplicationStatus).optional(),
+  // A job page shows the user's application for that posting
+  jobPostingId: z.uuid().optional(),
 })
 
 export type MyApplicationsQuery = z.output<typeof myApplicationsQuerySchema>

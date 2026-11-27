@@ -115,8 +115,14 @@ const apply = async (user: AuthUser, jobPostingId: string, { phone }: ApplyPaylo
   }
 }
 
-const getMyApplications = async (user: AuthUser, { page, limit, status }: MyApplicationsQuery) => {
-  const where: Prisma.ApplicationWhereInput = { userId: user.id, ...(status && { status }) }
+const getMyApplications = async (user: AuthUser, query: MyApplicationsQuery) => {
+  const { page, limit, status, jobPostingId } = query
+
+  const where: Prisma.ApplicationWhereInput = {
+    userId: user.id,
+    ...(status && { status }),
+    ...(jobPostingId && { jobPostingId }),
+  }
 
   const [applications, total] = await Promise.all([
     prisma.application.findMany({

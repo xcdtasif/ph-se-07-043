@@ -19,7 +19,7 @@ const cvError = (message: string, path = CV_FIELD) =>
 const multerMessage = (err: multer.MulterError) => {
   switch (err.code) {
     case "LIMIT_FILE_SIZE":
-      return `The CV must be ${CV_MAX_MB} MB or smaller`
+      return `CV must be ${CV_MAX_MB} MB or smaller`
     case "LIMIT_FILE_COUNT":
     case "LIMIT_UNEXPECTED_FILE":
       return `Send one file, in the ${CV_FIELD} field`
@@ -59,7 +59,7 @@ export const uploadCv: RequestHandler = (req, res, next) => {
       file.mimetype !== "application/pdf" ||
       file.buffer.subarray(0, 5).toString("latin1") !== "%PDF-"
     ) {
-      next(cvError("The CV must be a PDF"))
+      next(cvError("CV must be a PDF"))
 
       return
     }

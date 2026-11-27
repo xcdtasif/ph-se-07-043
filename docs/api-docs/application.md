@@ -97,11 +97,12 @@ Lists the caller's [applications](#application-object), newest first. `meta` hol
 
 **Query**
 
-| Param    | Rules                                                              | Default |
-| -------- | ------------------------------------------------------------------ | ------- |
-| `page`   | Integer ≥ 1                                                        | `1`     |
-| `limit`  | Integer 1–50                                                       | `10`    |
-| `status` | `PAYMENT_PENDING`, `SUBMITTED`, `SHORTLISTED`, `HIRED`, `REJECTED` | —       |
+| Param          | Rules                                                              | Default |
+| -------------- | ------------------------------------------------------------------ | ------- |
+| `page`         | Integer ≥ 1                                                        | `1`     |
+| `limit`        | Integer 1–50                                                       | `10`    |
+| `status`       | `PAYMENT_PENDING`, `SUBMITTED`, `SHORTLISTED`, `HIRED`, `REJECTED` | —       |
+| `jobPostingId` | Job posting UUID; the caller's application for it, if any          | —       |
 
 **Example**
 
