@@ -5,12 +5,7 @@ power to load shedding, customers report unplanned outages that technicians fix 
 follow along, and each zone hires its own technicians, with applicants paying the application fee
 through Stripe.
 
-| Link          | URL                                                            |
-| ------------- | -------------------------------------------------------------- |
-| Live site     | <https://ph-se-07-052-fa.vercel.app>                           |
-| Live API      | <https://ph-se-07-043.vercel.app/api/v1>                       |
-| Frontend repo | [ph-se-07-052-fa](https://github.com/xcdtasif/ph-se-07-052-fa) |
-| Backend repo  | [ph-se-07-043](https://github.com/xcdtasif/ph-se-07-043)       |
+**Live API:** <https://ph-se-07-043.vercel.app/api/v1>
 
 ## Overview
 
