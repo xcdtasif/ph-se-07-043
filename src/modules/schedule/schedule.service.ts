@@ -7,6 +7,7 @@ import { prisma } from "../../lib/prisma.js"
 import { AppError } from "../../utils/app-error.js"
 import { dhakaDayRange } from "../../utils/dhaka-time.js"
 import { lockLiveRow } from "../../utils/lock-live-row.js"
+import { managedZoneId } from "../../utils/managed-zone.js"
 import type { AuthUser } from "../auth/auth.user.js"
 import { slotWindowIssues } from "./schedule.rules.js"
 import type {
@@ -23,17 +24,6 @@ const slotSelect = {
   endsAt: true,
   status: true,
 } as const
-
-// authorize("ZONE_MANAGER") runs first, and a Zone Manager always has a zone
-const managedZoneId = (user: AuthUser) => {
-  const zoneId = user.employee?.zoneId
-
-  if (!zoneId) {
-    throw new AppError(httpStatus.FORBIDDEN, "You don't have permission to do this")
-  }
-
-  return zoneId
-}
 
 /*
 Locks the feeder FOR UPDATE, so slot changes on one feeder take turns: two can't both pass the

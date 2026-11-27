@@ -1,0 +1,29 @@
+// A customer saying their power is out. A Zone Manager dismisses it or (from step 13) links it to
+// a confirmed outage. The area is copied from the customer's profile when the report is made, so
+// moving later doesn't move old reports
+model OutageReport {
+  id            String             @id @default(uuid())
+  customerId    String             @map("customer_id")
+  areaId        String             @map("area_id")
+  description   String?
+  status        OutageReportStatus @default(PENDING)
+  dismissReason String?            @map("dismiss_reason")
+  dismissedById String?            @map("dismissed_by_id")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  customer    Customer @relation(fields: [customerId], references: [id])
+  area        Area     @relation(fields: [areaId], references: [id])
+  dismissedBy User?    @relation(fields: [dismissedById], references: [id])
+
+  @@unique([customerId, areaId], map: "outage_reports_customer_id_area_id_pending_key", where: raw("status = 'PENDING'"))
+  @@index([areaId, status])
+  @@index([customerId])
+  @@map("outage_reports")
+}
+
+enum OutageReportStatus {
+  PENDING
+  LINKED
+  DISMISSED
+}

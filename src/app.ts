@@ -12,6 +12,7 @@ import { areaRouter } from "./modules/area/area.routes.js"
 import { authRouter } from "./modules/auth/auth.routes.js"
 import { customerRouter } from "./modules/customer/customer.routes.js"
 import { feederRouter } from "./modules/feeder/feeder.routes.js"
+import { outageReportRouter } from "./modules/outage-report/outage-report.routes.js"
 import { scheduleRouter } from "./modules/schedule/schedule.routes.js"
 import { adminUserRouter } from "./modules/user/user.admin.routes.js"
 import { userRouter } from "./modules/user/user.routes.js"
@@ -49,6 +50,9 @@ app.use("/api/v1/areas", areaRouter)
 
 // Schedule
 app.use("/api/v1/schedules", scheduleRouter)
+
+// Outage
+app.use("/api/v1/outage-reports", outageReportRouter)
 
 // Admin
 app.use("/api/v1/admin/users", adminUserRouter)

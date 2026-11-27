@@ -9,10 +9,11 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  customer     Customer?
-  employees    Employee[]
-  auditLogs    AuditLog[]
-  createdSlots LoadSheddingSlot[]
+  customer         Customer?
+  employees        Employee[]
+  auditLogs        AuditLog[]
+  createdSlots     LoadSheddingSlot[]
+  dismissedReports OutageReport[]
 
   @@unique([email])
   @@unique([googleId])
@@ -29,8 +30,9 @@ model Customer {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id])
-  area Area @relation(fields: [areaId], references: [id])
+  user          User           @relation(fields: [userId], references: [id])
+  area          Area           @relation(fields: [areaId], references: [id])
+  outageReports OutageReport[]
 
   @@unique([userId])
   @@unique([meterNumber])
