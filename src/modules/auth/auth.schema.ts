@@ -1,5 +1,7 @@
 import z from "zod"
 
+import { nameSchema } from "../user/user.schema.js"
+
 const emailSchema = z.string().trim().toLowerCase().pipe(z.email())
 
 // bcrypt only reads the first 72 bytes, so longer passwords would be silently cut
@@ -11,7 +13,7 @@ const passwordSchema = z
   })
 
 export const registerUserSchema = z.strictObject({
-  name: z.string().trim().min(2).max(100),
+  name: nameSchema,
   email: emailSchema,
   password: passwordSchema,
 })
