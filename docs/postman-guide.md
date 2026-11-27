@@ -1,8 +1,10 @@
 # Postman Guide
 
 The API is documented in Postman, with a request for every endpoint grouped by module and then by
-who may call it (`Public`, `Authenticated`, and the roles as they are added). For endpoint rules
-and responses see [API Docs](api-docs).
+who may call it: `Public`, `Authenticated` (any logged-in user), `Customer`, `Technician`,
+`Zone Manager` and `Admin`. Each module folder says which account to log in as. The Stripe webhook
+is left out, since only Stripe can sign it. For endpoint rules and responses see
+[API Docs](api-docs).
 
 ## Environment
 
@@ -54,8 +56,8 @@ only a token from the frontend's widget passes.
 | Account                     | Role                                                                                              |
 | --------------------------- | ------------------------------------------------------------------------------------------------- |
 | `customer01@example.com`    | Customer in Mirpur 10, Block C (`customer05` is banned, `customer08` has no customer profile yet) |
-| `technician01@example.com`  | Technician, Mirpur zone                                                                           |
-| `zonemanager01@example.com` | Zone Manager, Mirpur zone                                                                         |
+| `technician01@example.com`  | Technician, Mirpur zone, with an outage in progress (`technician03` is free)                      |
+| `zonemanager01@example.com` | Zone Manager, Mirpur zone (`zonemanager02` runs Dhanmondi)                                        |
 | `ADMIN_EMAIL`               | Admin, password in `ADMIN_PASSWORD`                                                               |
 
 Edit the email and password in the **Log In User** body to switch accounts.
